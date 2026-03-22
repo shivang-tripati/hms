@@ -45,8 +45,10 @@ export default async function InvoiceDetailsPage({ params }: InvoiceDetailsPageP
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={invoice.status} />
-                    <Button variant="outline" size="sm" disabled>
-                        <Printer className="mr-2 h-4 w-4" /> Print
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/billing/invoices/${id}/print`}>
+                            <Printer className="mr-2 h-4 w-4" /> Print
+                        </Link>
                     </Button>
                     <Button asChild size="sm">
                         <Link href={`/billing/invoices/${id}/edit`}>
@@ -163,6 +165,12 @@ export default async function InvoiceDetailsPage({ params }: InvoiceDetailsPageP
                                             <span>{formatDate(receipt.receiptDate)}</span>
                                             <span>{receipt.paymentMode}</span>
                                         </div>
+                                        <Link
+                                            href={`/billing/receipts/${receipt.id}/print`}
+                                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                                        >
+                                            <Printer className="h-3 w-3" /> Print Receipt
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>

@@ -44,7 +44,6 @@ interface AdvertisementFormProps {
         brandName: string;
         artworkDescription: string | null;
         artworkUrl: string | null;
-        freeInstallationDays: number;
         installationDate: Date | null;
         removalDate: Date | null;
         status: string;
@@ -67,7 +66,6 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
             bookingId: initialData.bookingId,
             artworkDescription: initialData.artworkDescription || undefined,
             artworkUrl: initialData.artworkUrl || undefined,
-            freeInstallationDays: initialData.freeInstallationDays,
             installationDate: initialData.installationDate ? new Date(initialData.installationDate) : undefined,
             removalDate: initialData.removalDate ? new Date(initialData.removalDate) : undefined,
             status: initialData.status as "PENDING" | "INSTALLED" | "ACTIVE" | "REMOVED" | "COMPLETED",
@@ -77,7 +75,6 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
             campaignName: "",
             brandName: "",
             bookingId: "",
-            freeInstallationDays: 0,
             status: "PENDING",
             artworkDescription: "",
             artworkUrl: "",
@@ -281,20 +278,6 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
                                         />
                                     </PopoverContent>
                                 </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="freeInstallationDays"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Free Install Days</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                                </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}

@@ -37,7 +37,7 @@ export function CompleteTaskForm({ taskId }: CompleteTaskFormProps) {
         resolver: zodResolver(taskExecutionSchema),
         defaultValues: {
             taskId: taskId,
-            status: "COMPLETED",
+            status: "UNDER_REVIEW",
             condition: "GOOD",
             remarks: "",
             latitude: 0,

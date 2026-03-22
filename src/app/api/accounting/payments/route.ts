@@ -29,20 +29,35 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = paymentSchema.parse(body);
 
-        const payment = await (prisma as any).payment.create({
-            data: parsed,
-            include: {
-                vendor: true,
-                cashBankLedger: true,
-            },
+        // Validate that the selected ledger is a cash or bank ledger
+        const cashBankLedger = await prisma.ledger.findUnique({
+            where: { id: parsed.cashBankLedgerId },
         });
 
-        // Auto-create journal entry
-        try {
-            await createPaymentJournal(payment.id);
-        } catch (err) {
-            console.error("Failed to create payment journal:", err);
+        if (!cashBankLedger) {
+            return NextResponse.json({ error: "Cash/Bank ledger not found" }, { status: 400 });
         }
+
+        if (!cashBankLedger.isCash && !cashBankLedger.isBank) {
+            return NextResponse.json(
+                { error: "Selected ledger must be a Cash or Bank account" },
+                { status: 400 },
+            );
+        }
+
+        const payment = await prisma.$transaction(async (tx) => {
+            const newPayment = await (tx as any).payment.create({
+                data: parsed,
+                include: {
+                    vendor: true,
+                    cashBankLedger: true,
+                },
+            });
+
+            // Auto-create journal entry and ensure it's part of transaction
+            await createPaymentJournal(newPayment.id, tx);
+            return newPayment;
+        });
 
         return NextResponse.json(payment, { status: 201 });
     } catch (error: any) {

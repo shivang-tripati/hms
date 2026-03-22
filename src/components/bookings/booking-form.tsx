@@ -74,6 +74,7 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
             totalAmount: 0,
             billingCycle: "MONTHLY",
             status: "CONFIRMED",
+            freeMountings: 0,
             clientId: "",
             holdingId: "",
         };
@@ -374,6 +375,23 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                                         <SelectItem value="CANCELLED">Cancelled</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="freeMountings"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Free Mounting</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value) || 0)} />
+                                </FormControl>
+                                <FormDescription>
+                                    Number of days included for free mounting.
+                                </FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}

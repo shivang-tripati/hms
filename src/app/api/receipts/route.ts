@@ -11,6 +11,8 @@ export async function GET() {
             include: {
                 client: true,
                 invoice: true,
+                cashBankLedger: { select: { id: true, name: true } },
+                journalEntry: { select: { id: true, entryNumber: true, status: true } },
             },
         });
         return NextResponse.json(receipts);
@@ -27,6 +29,22 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const parsed = receiptSchema.parse(body);
+
+        // Validate that the selected ledger is a cash or bank ledger
+        const cashBankLedger = await prisma.ledger.findUnique({
+            where: { id: parsed.cashBankLedgerId },
+        });
+
+        if (!cashBankLedger) {
+            return NextResponse.json({ error: "Cash/Bank ledger not found" }, { status: 400 });
+        }
+
+        if (!cashBankLedger.isCash && !cashBankLedger.isBank) {
+            return NextResponse.json(
+                { error: "Selected ledger must be a Cash or Bank account" },
+                { status: 400 },
+            );
+        }
 
         const receipt = await prisma.$transaction(async (tx) => {
             // 1. Create Receipt
@@ -54,17 +72,11 @@ export async function POST(request: NextRequest) {
                 },
             });
 
+            // Auto-create journal entry (mandatory for receipts)
+            await createReceiptJournal(newReceipt.id, tx);
+
             return newReceipt;
         });
-
-        // Auto-create journal entry if cash/bank ledger was provided
-        if ((parsed as any).cashBankLedgerId) {
-            try {
-                await createReceiptJournal(receipt.id);
-            } catch (err) {
-                console.error("Failed to create receipt journal:", err);
-            }
-        }
 
         return NextResponse.json(receipt, { status: 201 });
     } catch (error: any) {

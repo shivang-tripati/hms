@@ -55,16 +55,20 @@ export function StaffDashboard({ stats }: StaffDashboardProps) {
                     </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-shadow">
+                <Card className="hover:shadow-lg transition-shadow col-span-1 md:col-span-2 lg:col-span-1">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Work Distribution</CardTitle>
                         <ClipboardList className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="flex gap-2 items-center flex-wrap">
-                            {stats.taskTypeCounts?.map((type: any) => (
-                                <div key={type.taskType} className="px-2 py-1 bg-muted rounded text-[10px] font-medium uppercase tracking-wider">
-                                    {formatEnum(type.taskType)} ({type._count.id})
+                        <div className="flex gap-2 flex-wrap">
+                            {stats.taskTypeCounts?.map((item: any) => (
+                                <div key={`${item.taskType}-${item.status}`} className="px-2.5 py-1.5 bg-muted/50 border border-border/50 rounded-md text-[11px] font-medium uppercase tracking-wider flex items-center gap-1.5 w-full sm:w-auto">
+                                    <span className="font-bold text-lg leading-none text-foreground">{item._count.id}</span>
+                                    <div className="flex flex-col text-left">
+                                        <span className="text-muted-foreground leading-tight text-[9px]">{formatEnum(item.status)}</span>
+                                        <span className="leading-tight">{formatEnum(item.taskType)}</span>
+                                    </div>
                                 </div>
                             ))}
                             {(!stats.taskTypeCounts || stats.taskTypeCounts.length === 0) && (

@@ -43,9 +43,10 @@ interface ReceiptFormProps {
     invoices: (Invoice & {
         booking: { bookingNumber: string };
     })[];
+    cashBankLedgers: { id: string; name: string }[];
 }
 
-export function ReceiptForm({ clients, invoices }: ReceiptFormProps) {
+export function ReceiptForm({ clients, invoices, cashBankLedgers }: ReceiptFormProps) {
     const router = useRouter();
 
     const form = useForm<ReceiptFormData>({
@@ -59,6 +60,7 @@ export function ReceiptForm({ clients, invoices }: ReceiptFormProps) {
             amount: 0,
             referenceNo: "",
             notes: "",
+            cashBankLedgerId: "",
         } as any,
     });
 
@@ -101,8 +103,8 @@ export function ReceiptForm({ clients, invoices }: ReceiptFormProps) {
             toast.success("Receipt created & Invoice updated!");
             router.push("/billing");
             router.refresh();
-        } catch (error) {
-            toast.error("Failed to create receipt");
+        } catch (error: any) {
+            toast.error(error.message || "Failed to create receipt");
             console.error(error);
         }
     };
@@ -260,6 +262,31 @@ export function ReceiptForm({ clients, invoices }: ReceiptFormProps) {
                                         <SelectItem value="NEFT">NEFT/IMPS</SelectItem>
                                         <SelectItem value="UPI">UPI</SelectItem>
                                         <SelectItem value="OTHER">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="cashBankLedgerId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Cash/Bank Account</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select cash/bank ledger" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {cashBankLedgers.map((l) => (
+                                            <SelectItem key={l.id} value={l.id}>
+                                                {l.name}
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

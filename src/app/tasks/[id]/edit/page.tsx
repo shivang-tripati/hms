@@ -23,7 +23,7 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
             apiFetch<any>(`/api/tasks/${id}`),
             apiFetch<any[]>("/api/holdings"),
             apiFetch<any[]>("/api/advertisements"),
-            apiFetch<any[]>("/api/users"),
+            apiFetch<any[]>("/api/users?role=STAFF"),
         ]);
     } catch (error) {
         notFound();

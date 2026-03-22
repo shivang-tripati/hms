@@ -124,3 +124,55 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Print Styles ──────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything except the printable content */
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide sidebar, header, action bars */
+  nav,
+  header,
+  aside,
+  [class*="print\:hidden"],
+  [data-sidebar],
+  [data-header] {
+    display: none !important;
+  }
+
+  /* Reset layout wrapper margins/padding */
+  main,
+  [data-content] {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  /* Print container sizing */
+  .print-invoice-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Avoid breaking inside critical elements */
+  table,
+  .print-no-break {
+    page-break-inside: avoid;
+  }
+}

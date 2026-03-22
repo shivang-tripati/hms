@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ use
                 },
             }),
             prisma.task.groupBy({
-                by: ["taskType"],
+                by: ["taskType", "status"],
                 where: { assignedToId: userId },
                 _count: { id: true },
             }),

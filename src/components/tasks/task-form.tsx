@@ -47,7 +47,11 @@ interface TaskFormProps {
         status: string;
         scheduledDate: Date;
         completedDate: Date | null;
-        assignedTo: string | null;
+        assignedToId: string | null;
+        assignedTo: {
+            id: string;
+            name: string;
+        } | null;
         estimatedCost: any; // Decimal
         actualCost: any; // Decimal
         notes: string | null;
@@ -62,6 +66,8 @@ interface TaskFormProps {
 export function TaskForm({ initialData, holdings, advertisements, staff }: TaskFormProps) {
     const router = useRouter();
 
+    console.log(initialData);
+
     const defaultValues: Partial<TaskFormData> = initialData
         ? {
             title: initialData.title,
@@ -71,7 +77,7 @@ export function TaskForm({ initialData, holdings, advertisements, staff }: TaskF
             status: initialData.status as "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
             scheduledDate: new Date(initialData.scheduledDate),
             completedDate: initialData.completedDate ? new Date(initialData.completedDate) : undefined,
-            assignedTo: initialData.assignedTo || undefined,
+            assignedTo: initialData.assignedToId || (initialData.assignedTo?.id) || undefined,
             estimatedCost: initialData.estimatedCost ? Number(initialData.estimatedCost) : undefined,
             actualCost: initialData.actualCost ? Number(initialData.actualCost) : undefined,
             notes: initialData.notes || undefined,

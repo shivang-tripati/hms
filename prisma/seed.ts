@@ -11,43 +11,7 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
     console.log("🌱 Seeding database...");
 
-    // ─── Users ──────────────────────────────────────────────────────────────────
-    const hashedPasswordAdmin = await bcrypt.hash("admin123", 10);
-    const hashedPasswordStaff = await bcrypt.hash("staff123", 10);
-
-    const admin = await prisma.user.upsert({
-        where: { email: "admin@hms.com" },
-        update: {
-            password: hashedPasswordAdmin,
-            plainPassword: "admin123",
-        },
-        create: {
-            email: "admin@hms.com",
-            name: "Admin User",
-            password: hashedPasswordAdmin,
-            plainPassword: "admin123",
-            role: "ADMIN",
-        },
-    });
-
-    const staff = await prisma.user.upsert({
-        where: { email: "staff@hms.com" },
-        update: {
-            password: hashedPasswordStaff,
-            plainPassword: "staff123",
-        },
-        create: {
-            email: "staff@hms.com",
-            name: "Staff User",
-            password: hashedPasswordStaff,
-            plainPassword: "staff123",
-            role: "STAFF",
-        },
-    });
-    console.log("  ✅ Users seeded (admin@hms.com / staff@hms.com)");
-
-    // ─── Clean Database ────────────────────────────────────────────────────────
-    // Clean accounting tables first (foreign key order)
+    // ─── Clean Database ──────────────────────────────────────────────────────────
     await (prisma as any).journalLine.deleteMany();
     await (prisma as any).journalEntry.deleteMany();
     await (prisma as any).payment.deleteMany();
@@ -66,8 +30,36 @@ async function main() {
     await prisma.client.deleteMany();
     await (prisma as any).ledger.deleteMany();
 
+    // ─── Users ──────────────────────────────────────────────────────────────────
+    const hashedPasswordAdmin = await bcrypt.hash("admin123", 10);
+    const hashedPasswordStaff = await bcrypt.hash("staff123", 10);
 
-    // ─── Cities ─────────────────────────────────────────────────────────────────
+    const admin = await prisma.user.upsert({
+        where: { email: "admin@hms.com" },
+        update: { password: hashedPasswordAdmin, plainPassword: "admin123" },
+        create: {
+            email: "admin@hms.com",
+            name: "Admin User",
+            password: hashedPasswordAdmin,
+            plainPassword: "admin123",
+            role: "ADMIN",
+        },
+    });
+
+    const staff = await prisma.user.upsert({
+        where: { email: "staff@hms.com" },
+        update: { password: hashedPasswordStaff, plainPassword: "staff123" },
+        create: {
+            email: "staff@hms.com",
+            name: "Staff User",
+            password: hashedPasswordStaff,
+            plainPassword: "staff123",
+            role: "STAFF",
+        },
+    });
+    console.log("  ✅ Users seeded (admin@hms.com / staff@hms.com)");
+
+    // ─── Cities ────────────────────────────────────────────────────────────────
     const cities = await Promise.all([
         prisma.city.upsert({
             where: { name_state: { name: "Mumbai", state: "Maharashtra" } },
@@ -97,7 +89,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${cities.length} cities seeded`);
 
-    // ─── Holding Types ──────────────────────────────────────────────────────────
+    // ─── Holding Types ────────────────────────────────────────────────────────
     const holdingTypes = await Promise.all([
         prisma.holdingType.upsert({
             where: { name: "Billboard" },
@@ -127,7 +119,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${holdingTypes.length} holding types seeded`);
 
-    // ─── HSN Codes ──────────────────────────────────────────────────────────────
+    // ─── HSN Codes ────────────────────────────────────────────────────────────
     const hsnCodes = await Promise.all([
         prisma.hsnCode.upsert({
             where: { code: "998365" },
@@ -147,8 +139,8 @@ async function main() {
     ]);
     console.log(`  ✅ ${hsnCodes.length} HSN codes seeded`);
 
-    // ─── Chart of Accounts (Ledgers) ────────────────────────────────────────────
-    // ASSET group ledgers
+    // ─── Chart of Accounts (Ledgers) ──────────────────────────────────────────
+    // Asset group
     const assetsGroup = await (prisma as any).ledger.create({
         data: { name: "Assets", code: "ASSETS", type: "ASSET", isGroup: true },
     });
@@ -165,7 +157,7 @@ async function main() {
         data: { name: "Accounts Receivable", code: "AR", type: "ASSET", isGroup: true, isReceivable: true, parentId: currentAssetsGroup.id },
     });
 
-    // LIABILITY group ledgers
+    // Liability group
     const liabilitiesGroup = await (prisma as any).ledger.create({
         data: { name: "Liabilities", code: "LIABILITIES", type: "LIABILITY", isGroup: true },
     });
@@ -188,7 +180,7 @@ async function main() {
         data: { name: "IGST Payable", code: "IGST-OUT", type: "LIABILITY", isTaxOutput: true, parentId: taxPayablesGroup.id },
     });
 
-    // INCOME group ledgers
+    // Income group
     const incomeGroup = await (prisma as any).ledger.create({
         data: { name: "Income", code: "INCOME", type: "INCOME", isGroup: true },
     });
@@ -196,7 +188,7 @@ async function main() {
         data: { name: "Advertising Revenue", code: "REV-ADV", type: "INCOME", isRevenue: true, parentId: incomeGroup.id },
     });
 
-    // EXPENSE group ledgers
+    // Expense group
     const expenseGroup = await (prisma as any).ledger.create({
         data: { name: "Expenses", code: "EXPENSES", type: "EXPENSE", isGroup: true },
     });
@@ -207,17 +199,16 @@ async function main() {
         data: { name: "Maintenance Expense", code: "EXP-MAINT", type: "EXPENSE", parentId: expenseGroup.id },
     });
 
-    // EQUITY group ledgers
+    // Equity group
     const equityGroup = await (prisma as any).ledger.create({
         data: { name: "Equity", code: "EQUITY", type: "EQUITY", isGroup: true },
     });
     await (prisma as any).ledger.create({
         data: { name: "Capital Account", code: "CAPITAL", type: "EQUITY", parentId: equityGroup.id },
     });
-
     console.log("  ✅ Chart of Accounts seeded (20+ ledgers)");
 
-    // ─── Holdings ───────────────────────────────────────────────────────────────
+    // ─── Holdings ────────────────────────────────────────────────────────────
     const holdings = await Promise.all([
         prisma.holding.create({
             data: {
@@ -317,7 +308,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${holdings.length} holdings seeded`);
 
-    // ─── Ownership Contracts ────────────────────────────────────────────────────
+    // ─── Ownership Contracts ─────────────────────────────────────────────────
     const contracts = await Promise.all([
         prisma.ownershipContract.create({
             data: {
@@ -370,8 +361,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${contracts.length} ownership contracts seeded`);
 
-    // ─── Vendors (linked to ownership contracts) ────────────────────────────────
-    // Create individual AP ledgers per vendor
+    // ─── Vendors (with AP ledgers) ───────────────────────────────────────────
     const apMmrda = await (prisma as any).ledger.create({
         data: { name: "MMRDA - Payable", code: "AP-MMRDA", type: "LIABILITY", isPayable: true, parentId: apGroup.id },
     });
@@ -422,8 +412,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${vendors.length} vendors seeded`);
 
-    // ─── Clients ────────────────────────────────────────────────────────────────
-    // Create individual AR ledgers per client
+    // ─── Clients (with AR ledgers) ───────────────────────────────────────────
     const arTata = await (prisma as any).ledger.create({
         data: { name: "Tata Motors - Receivable", code: "AR-TATA", type: "ASSET", isReceivable: true, parentId: arGroup.id },
     });
@@ -477,7 +466,7 @@ async function main() {
     ]);
     console.log(`  ✅ ${clients.length} clients seeded`);
 
-    // ─── Bookings ───────────────────────────────────────────────────────────────
+    // ─── Bookings (with correct field names) ───────────────────────────────────
     const bookings = await Promise.all([
         prisma.booking.create({
             data: {
@@ -488,6 +477,8 @@ async function main() {
                 totalAmount: 1500000,
                 billingCycle: BillingCycle.MONTHLY,
                 status: "ACTIVE",
+                freeMountings: 7,        // ✅ correct field name
+                totalMountings: 1,        // ✅ correct field name
                 clientId: clients[0].id,
                 holdingId: holdings[0].id,
             },
@@ -501,6 +492,8 @@ async function main() {
                 totalAmount: 2100000,
                 billingCycle: BillingCycle.QUARTERLY,
                 status: "ACTIVE",
+                freeMountings: 5,
+                totalMountings: 0,
                 clientId: clients[1].id,
                 holdingId: holdings[2].id,
             },
@@ -514,6 +507,8 @@ async function main() {
                 totalAmount: 1080000,
                 billingCycle: BillingCycle.MONTHLY,
                 status: "CONFIRMED",
+                freeMountings: 3,
+                totalMountings: 0,
                 clientId: clients[2].id,
                 holdingId: holdings[1].id,
             },
@@ -521,14 +516,13 @@ async function main() {
     ]);
     console.log(`  ✅ ${bookings.length} bookings seeded`);
 
-    // ─── Advertisements ─────────────────────────────────────────────────────────
+    // ─── Advertisements ──────────────────────────────────────────────────────
     const ads = await Promise.all([
         prisma.advertisement.create({
             data: {
                 campaignName: "Tata Nexon EV Launch Campaign",
                 brandName: "Tata Nexon EV",
                 artworkDescription: "New Nexon EV MAX with 465km range",
-                freeInstallationDays: 7,
                 installationDate: new Date("2024-07-05"),
                 status: "ACTIVE",
                 bookingId: bookings[0].id,
@@ -539,33 +533,44 @@ async function main() {
                 campaignName: "Jio 5G Coverage Expansion",
                 brandName: "Jio 5G",
                 artworkDescription: "Jio True 5G now in your city",
-                freeInstallationDays: 5,
                 installationDate: new Date("2024-08-10"),
                 status: "ACTIVE",
                 bookingId: bookings[1].id,
             },
         }),
+        prisma.advertisement.create({
+            data: {
+                campaignName: "Infosys Springboard",
+                brandName: "Infosys",
+                artworkDescription: "Free upskilling platform",
+                installationDate: null,
+                status: "PENDING",
+                bookingId: bookings[2].id,
+            },
+        }),
     ]);
     console.log(`  ✅ ${ads.length} advertisements seeded`);
 
-    // ─── Tasks ──────────────────────────────────────────────────────────────────
-    const tasks = await Promise.all([
-        prisma.task.create({
-            data: {
-                title: "Install Tata Nexon billboard",
-                description: "Install new artwork for Tata Nexon EV campaign",
-                taskType: TaskType.INSTALLATION,
-                priority: Priority.HIGH,
-                status: "COMPLETED",
-                scheduledDate: new Date("2024-07-05"),
-                completedDate: new Date("2024-07-05"),
-                assignedTo: { connect: { id: staff.id } },
-                estimatedCost: 15000,
-                actualCost: 14500,
-                holding: { connect: { id: holdings[0].id } },
-                advertisement: { connect: { id: ads[0].id } },
-            },
-        }),
+    // ─── Tasks ───────────────────────────────────────────────────────────────
+    // MOUNTING task (linked to advertisement) that will increment totalMountings when completed
+    const mountingTask = await prisma.task.create({
+        data: {
+            title: "Mount Tata Nexon artwork",
+            description: "Install flex on billboard for Tata Nexon EV campaign",
+            taskType: TaskType.MOUNTING,
+            priority: Priority.HIGH,
+            status: "COMPLETED",        // mark completed to simulate increment
+            scheduledDate: new Date("2024-07-05"),
+            completedDate: new Date("2024-07-05"),
+            assignedToId: staff.id,
+            estimatedCost: 15000,
+            actualCost: 14500,
+            advertisementId: ads[0].id,
+        },
+    });
+
+    // Create additional tasks
+    await Promise.all([
         prisma.task.create({
             data: {
                 title: "Q3 Inspection - WEH Billboard",
@@ -574,9 +579,9 @@ async function main() {
                 priority: Priority.MEDIUM,
                 status: "PENDING",
                 scheduledDate: new Date("2025-03-15"),
-                assignedTo: { connect: { id: staff.id } },
+                assignedToId: staff.id,
                 estimatedCost: 5000,
-                holding: { connect: { id: holdings[0].id } },
+                holdingId: holdings[0].id,
             },
         }),
         prisma.task.create({
@@ -587,16 +592,38 @@ async function main() {
                 priority: Priority.HIGH,
                 status: "IN_PROGRESS",
                 scheduledDate: new Date("2025-02-20"),
-                assignedTo: { connect: { id: staff.id } },
+                assignedToId: staff.id,
                 estimatedCost: 25000,
-                holding: { connect: { id: holdings[2].id } },
+                holdingId: holdings[2].id,
+            },
+        }),
+        prisma.task.create({
+            data: {
+                title: "Install New Hoarding Structure",
+                description: "Install physical structure at Hinjewadi",
+                taskType: TaskType.INSTALLATION,
+                priority: Priority.URGENT,
+                status: "COMPLETED",
+                scheduledDate: new Date("2024-06-01"),
+                completedDate: new Date("2024-06-05"),
+                assignedToId: staff.id,
+                estimatedCost: 500000,
+                actualCost: 520000,
+                holdingId: holdings[2].id,
             },
         }),
     ]);
-    console.log(`  ✅ ${tasks.length} tasks seeded`);
 
-    // ─── Inspections ────────────────────────────────────────────────────────────
-    const inspections = await Promise.all([
+    // After creating a completed mounting task, increment totalMountings on the booking
+    await prisma.booking.update({
+        where: { id: bookings[0].id },
+        data: { totalMountings: { increment: 1 } }, // ✅ increment totalMountings
+    });
+
+    console.log(`  ✅ Tasks seeded (mounting task completed, totalMountings incremented)`);
+
+    // ─── Inspections ─────────────────────────────────────────────────────────
+    await Promise.all([
         prisma.inspection.create({
             data: {
                 inspectionDate: new Date("2024-10-15"),
@@ -606,7 +633,7 @@ async function main() {
                 structureOk: true,
                 visibilityOk: true,
                 remarks: "Billboard in good condition. Minor dust accumulation.",
-                holding: { connect: { id: holdings[0].id } },
+                holdingId: holdings[0].id,
             },
         }),
         prisma.inspection.create({
@@ -618,13 +645,13 @@ async function main() {
                 structureOk: true,
                 visibilityOk: true,
                 remarks: "Two LED panels need replacement. Structure intact.",
-                holding: { connect: { id: holdings[2].id } },
+                holdingId: holdings[2].id,
             },
         }),
     ]);
-    console.log(`  ✅ ${inspections.length} inspections seeded`);
+    console.log("  ✅ 2 inspections seeded");
 
-    // ─── Maintenance Records ────────────────────────────────────────────────────
+    // ─── Maintenance Records ─────────────────────────────────────────────────
     await Promise.all([
         prisma.maintenanceRecord.create({
             data: {
@@ -633,7 +660,7 @@ async function main() {
                 cost: 8000,
                 performedDate: new Date("2024-09-01"),
                 performedBy: "CleanPro Services",
-                holding: { connect: { id: holdings[0].id } },
+                holdingId: holdings[0].id,
             },
         }),
         prisma.maintenanceRecord.create({
@@ -643,13 +670,13 @@ async function main() {
                 cost: 35000,
                 performedDate: new Date("2024-12-01"),
                 performedBy: "ElectroFix Team",
-                holding: { connect: { id: holdings[2].id } },
+                holdingId: holdings[2].id,
             },
         }),
     ]);
-    console.log(`  ✅ 2 maintenance records seeded`);
+    console.log("  ✅ 2 maintenance records seeded");
 
-    // ─── Invoices ───────────────────────────────────────────────────────────────
+    // ─── Invoices ────────────────────────────────────────────────────────────
     const invoices = await Promise.all([
         prisma.invoice.create({
             data: {
@@ -666,9 +693,9 @@ async function main() {
                 totalAmount: 295000,
                 paidAmount: 295000,
                 status: "PAID",
-                client: { connect: { id: clients[0].id } },
-                booking: { connect: { id: bookings[0].id } },
-                hsnCode: { connect: { id: hsnCodes[0].id } },
+                clientId: clients[0].id,
+                bookingId: bookings[0].id,
+                hsnCodeId: hsnCodes[0].id,
             },
         }),
         prisma.invoice.create({
@@ -686,9 +713,9 @@ async function main() {
                 totalAmount: 295000,
                 paidAmount: 0,
                 status: "SENT",
-                client: { connect: { id: clients[0].id } },
-                booking: { connect: { id: bookings[0].id } },
-                hsnCode: { connect: { id: hsnCodes[0].id } },
+                clientId: clients[0].id,
+                bookingId: bookings[0].id,
+                hsnCodeId: hsnCodes[0].id,
             },
         }),
         prisma.invoice.create({
@@ -706,16 +733,16 @@ async function main() {
                 totalAmount: 1239000,
                 paidAmount: 500000,
                 status: "PARTIALLY_PAID",
-                client: { connect: { id: clients[1].id } },
-                booking: { connect: { id: bookings[1].id } },
-                hsnCode: { connect: { id: hsnCodes[1].id } },
+                clientId: clients[1].id,
+                bookingId: bookings[1].id,
+                hsnCodeId: hsnCodes[1].id,
             },
         }),
     ]);
     console.log(`  ✅ ${invoices.length} invoices seeded`);
 
-    // ─── Receipts ───────────────────────────────────────────────────────────────
-    const receipts = await Promise.all([
+    // ─── Receipts (with required cashBankLedgerId) ──────────────────────────
+    await Promise.all([
         prisma.receipt.create({
             data: {
                 receiptNumber: "RCT-2024-001",
@@ -723,8 +750,9 @@ async function main() {
                 amount: 295000,
                 paymentMode: PaymentMode.NEFT,
                 referenceNo: "NEFT-TM-20240715-001",
-                client: { connect: { id: clients[0].id } },
-                invoice: { connect: { id: invoices[0].id } },
+                clientId: clients[0].id,
+                invoiceId: invoices[0].id,
+                cashBankLedgerId: bankLedger.id,
             },
         }),
         prisma.receipt.create({
@@ -734,12 +762,28 @@ async function main() {
                 amount: 500000,
                 paymentMode: PaymentMode.RTGS,
                 referenceNo: "RTGS-RIL-20240901-001",
-                client: { connect: { id: clients[1].id } },
-                invoice: { connect: { id: invoices[2].id } },
+                clientId: clients[1].id,
+                invoiceId: invoices[2].id,
+                cashBankLedgerId: bankLedger.id,
             },
         }),
     ]);
-    console.log(`  ✅ ${receipts.length} receipts seeded`);
+    console.log("  ✅ 2 receipts seeded (with cash/bank ledger)");
+
+    // ─── Vendor Payments (with required cashBankLedgerId) ───────────────────
+    await prisma.payment.create({
+        data: {
+            paymentNumber: "PAY-2024-001",
+            paymentDate: new Date("2024-07-20"),
+            amount: 150000,
+            paymentMode: PaymentMode.NEFT,
+            referenceNo: "NEFT-MMRDA-001",
+            notes: "Monthly rent for July",
+            vendorId: vendors[0].id,
+            cashBankLedgerId: bankLedger.id,
+        },
+    });
+    console.log("  ✅ 1 vendor payment seeded (with cash/bank ledger)");
 
     console.log("\n✨ Seeding complete!");
 }

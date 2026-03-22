@@ -92,9 +92,19 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                                 <p className="font-medium">{advertisement.removalDate ? formatDate(advertisement.removalDate) : "TBD"}</p>
                             </div>
                         </div>
-                        <div>
-                            <p className="text-muted-foreground mb-1">Free Installation Days</p>
-                            <p className="font-medium">{advertisement.freeInstallationDays} Days</p>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-muted-foreground mb-1">Free Installation Days</p>
+                                <p className="font-medium">{advertisement.booking.freeInstallationDays} Days</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground mb-1">Total Installations</p>
+                                <p className="font-medium">{advertisement.booking.totalInstallations}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground mb-1">Total Mountings</p>
+                                <p className="font-medium">{advertisement.booking.totalMountings}</p>
+                            </div>
                         </div>
                         <Separator />
 

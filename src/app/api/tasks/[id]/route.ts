@@ -12,10 +12,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 holding: true,
                 advertisement: true,
                 executions: {
-                    include: { performedBy: { select: { name: true } } },
+                    include: { performedBy: { select: { id: true, name: true } } },
                     orderBy: { createdAt: "desc" },
                 },
-                assignedTo: { select: { name: true } },
+                assignedTo: { select: { id: true, name: true } },
             },
         });
         if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });

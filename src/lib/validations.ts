@@ -103,6 +103,7 @@ export const bookingSchema = z.object({
     totalAmount: z.coerce.number().positive("Total amount must be positive"),
     billingCycle: z.enum(["MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY"]).default("MONTHLY"),
     status: z.enum(["CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"]).default("CONFIRMED"),
+    freeMountings: z.coerce.number().int().min(0).default(0),
     notes: z.string().optional(),
     clientId: z.string().min(1, "Client is required"),
     holdingId: z.string().min(1, "Holding is required"),
@@ -117,7 +118,6 @@ export const advertisementSchema = z.object({
     brandName: z.string().min(1, "Brand name is required"),
     artworkDescription: z.string().optional(),
     artworkUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
-    freeInstallationDays: z.coerce.number().int().min(0).default(0),
     installationDate: z.coerce.date().optional(),
     removalDate: z.coerce.date().optional(),
     status: z.enum(["PENDING", "INSTALLED", "ACTIVE", "REMOVED", "COMPLETED"]).default("PENDING"),
@@ -151,7 +151,7 @@ export type TaskFormData = z.infer<typeof taskSchema>;
 
 export const taskExecutionSchema = z.object({
     taskId: z.string().min(1, "Task ID is required"),
-    status: z.enum(["COMPLETED", "CANCELLED"]),
+    status: z.enum(["COMPLETED", "CANCELLED", "UNDER_REVIEW"]),
     condition: z.enum(["EXCELLENT", "GOOD", "FAIR", "POOR", "CRITICAL"]),
     remarks: z.string().optional(),
     latitude: z.number(),
@@ -198,6 +198,7 @@ export const receiptSchema = z.object({
     notes: z.string().optional(),
     clientId: z.string().min(1, "Client is required"),
     invoiceId: z.string().min(1, "Invoice is required"),
+    cashBankLedgerId: z.string().min(1, "Cash/Bank ledger is required"),
 });
 
 export type ReceiptFormData = z.infer<typeof receiptSchema>;

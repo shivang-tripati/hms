@@ -17,7 +17,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         const parsed = taskExecutionSchema.parse(body);
 
         const execution = await prisma.$transaction(async (tx) => {
-            // 1. Create task execution record
+            // 1. Fetch the task to get its type and advertisement link
+            const task = await tx.task.findUnique({
+                where: { id: parsed.taskId },
+                include: {
+                    advertisement: {
+                        select: { bookingId: true },
+                    },
+                },
+            });
+
+            if (!task) throw new Error("Task not found");
+
+            // 2. Create task execution record
             const exec = await tx.taskExecution.create({
                 data: {
                     taskId: parsed.taskId,
@@ -33,8 +45,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 },
             });
 
-            // 2. Update task status
-            await tx.task.update({
+            // 3. Update task status
+            const updatedTask = await tx.task.update({
                 where: { id: parsed.taskId },
                 data: {
                     status: parsed.status,
@@ -42,7 +54,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 },
             });
 
-            return exec;
+            let updatedBooking = null;
+
+            // 4. If this is MOUNTING task being COMPLETED, increment counts
+            if (
+                parsed.status === "COMPLETED" &&
+                task.advertisement?.bookingId
+            ) {
+                if (task.taskType === "MOUNTING") {
+                    updatedBooking = await (tx as any).booking.update({
+                        where: { id: task.advertisement.bookingId },
+                        data: { totalMountings: { increment: 1 } },
+                    });
+                }
+            }
+
+            return { execution: exec, updatedTask, updatedBooking };
         });
 
         return NextResponse.json(execution, { status: 201 });

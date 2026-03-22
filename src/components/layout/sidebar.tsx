@@ -42,7 +42,8 @@ const navigation = [
     { name: "Vendors", href: "/master-data/vendors", icon: Building2, roles: ["ADMIN"] },
     { name: "Journal Entries", href: "/accounting/journal-entries", icon: BookOpen, roles: ["ADMIN"] },
     { name: "Payments", href: "/accounting/payments", icon: CreditCard, roles: ["ADMIN"] },
-    { name: "Reports", href: "/reports/trial-balance", icon: BarChart3, roles: ["ADMIN"] },
+    { name: "Analytics", href: "/reports/analytics", icon: BarChart3, roles: ["ADMIN"] },
+    { name: "Accounting Reports", href: "/reports/trial-balance", icon: BarChart3, roles: ["ADMIN"] },
 ];
 
 export function SidebarContent({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) {

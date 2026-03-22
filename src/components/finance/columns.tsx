@@ -1,7 +1,7 @@
 "use client";
 
 import { Invoice, Receipt } from "@prisma/client";
-import { MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -83,6 +83,11 @@ function InvoiceActions({ invoice }: { invoice: Invoice }) {
                         <Pencil className="mr-2 h-4 w-4" /> Edit
                     </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href={`/billing/invoices/${invoice.id}/print`}>
+                        <Printer className="mr-2 h-4 w-4" /> Print Invoice
+                    </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -148,6 +153,12 @@ function ReceiptActions({ receipt }: { receipt: Receipt }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                    <Link href={`/billing/receipts/${receipt.id}/print`}>
+                        <Printer className="mr-2 h-4 w-4" /> Print Receipt
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete / Revert
                 </DropdownMenuItem>

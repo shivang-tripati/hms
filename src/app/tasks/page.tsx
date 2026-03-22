@@ -27,9 +27,7 @@ export default async function TasksPage() {
                     </Button>
                 )}
             </PageHeader>
-            <div className="bg-card">
-                <TaskTable tasks={tasks} role={role} />
-            </div>
+            <TaskTable tasks={tasks} role={role} />
         </div>
     );
 }

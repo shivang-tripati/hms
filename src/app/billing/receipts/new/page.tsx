@@ -2,12 +2,23 @@ import { apiFetch } from "@/lib/api";
 import { Receipt } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { ReceiptForm } from "@/components/finance/receipt-form";
+import { prisma } from "@/lib/db";
 
 export default async function NewReceiptPage() {
     const [clients, invoices] = await Promise.all([
         apiFetch<any[]>("/api/clients"),
         apiFetch<any[]>("/api/invoices"),
     ]);
+
+    // Fetch cash/bank ledgers directly for the form
+    const cashBankLedgers = await prisma.ledger.findMany({
+        where: {
+            OR: [{ isCash: true }, { isBank: true }],
+            isGroup: false,
+        },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+    });
 
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
@@ -20,6 +31,7 @@ export default async function NewReceiptPage() {
                 <ReceiptForm
                     clients={clients}
                     invoices={invoices}
+                    cashBankLedgers={cashBankLedgers}
                 />
             </div>
         </div>
