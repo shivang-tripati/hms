@@ -1,6 +1,9 @@
 import { apiFetch } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const typeColors: Record<string, string> = {
     ASSET: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
     LIABILITY: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",

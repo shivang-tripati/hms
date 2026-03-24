@@ -6,6 +6,12 @@ export async function apiFetch<T = unknown>(
     url: string,
     options?: RequestInit,
 ): Promise<T> {
+    const isBuilding = process.env.NEXT_PHASE === 'phase-production-build';
+
+    if (isBuilding && typeof window === "undefined") {
+        console.log(`[Build] Skipping API call to ${url}`);
+        return [] as T;
+    }
     let finalUrl = url;
 
     // Handle server-side relative URLs

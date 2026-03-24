@@ -2,6 +2,9 @@ import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { JournalEntryForm } from "@/components/accounting/journal-entry-form";
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function NewJournalEntryPage() {
     const ledgers = await apiFetch<any[]>("/api/accounting/ledgers");
 

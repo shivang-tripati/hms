@@ -6,6 +6,9 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const statusColors: Record<string, string> = {
     DRAFT: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     POSTED: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",

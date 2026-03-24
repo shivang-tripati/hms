@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const payment = await prisma.$transaction(async (tx) => {
+        const payment = await prisma.$transaction(async (tx: any) => {
             const newPayment = await (tx as any).payment.create({
                 data: parsed,
                 include: {

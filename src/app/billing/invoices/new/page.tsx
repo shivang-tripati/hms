@@ -3,6 +3,9 @@ import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { InvoiceForm } from "@/components/finance/invoice-form";
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function NewInvoicePage() {
     const [clients, bookings, hsnCodes] = await Promise.all([
         apiFetch<any[]>("/api/clients"),
