@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { receiptSchema } from "@/lib/validations";
 import { createReceiptJournal } from "@/lib/accounting";
-import { Prisma } from "@prisma/client";
 
 export async function GET() {
     try {
