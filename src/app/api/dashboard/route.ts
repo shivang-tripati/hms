@@ -21,23 +21,23 @@ export async function GET() {
             recentBookings,
             expiringBookings,
         ] = await Promise.all([
-            prisma.holding.count().catch(err => { console.error("Error in totalHoldings:", err); throw err; }),
-            prisma.client.count().catch(err => { console.error("Error in totalClients:", err); throw err; }),
+            prisma.holding.count().catch((err: Error) => { console.error("Error in totalHoldings:", err); throw err; }),
+            prisma.client.count().catch((err: Error) => { console.error("Error in totalClients:", err); throw err; }),
             prisma.booking.count({
                 where: {
                     startDate: { lte: now },
                     endDate: { gte: now },
                     status: { in: ["CONFIRMED", "ACTIVE"] },
                 },
-            }).catch(err => { console.error("Error in activeBookings:", err); throw err; }),
+            }).catch((err: Error) => { console.error("Error in activeBookings:", err); throw err; }),
             prisma.invoice.aggregate({
                 _sum: { totalAmount: true },
                 where: {
                     invoiceDate: { gte: startOfMonth, lte: endOfMonth },
                     status: { not: "CANCELLED" },
                 },
-            }).catch(err => { console.error("Error in monthlyRevenueAgg:", err); throw err; }),
-            prisma.task.count({ where: { status: { in: ["PENDING", "IN_PROGRESS"] } } }).catch(err => { console.error("Error in pendingTasks:", err); throw err; }),
+            }).catch((err: Error) => { console.error("Error in monthlyRevenueAgg:", err); throw err; }),
+            prisma.task.count({ where: { status: { in: ["PENDING", "IN_PROGRESS"] } } }).catch((err: Error) => { console.error("Error in pendingTasks:", err); throw err; }),
             prisma.booking.findMany({
                 take: 5,
                 orderBy: { createdAt: "desc" },
@@ -45,7 +45,7 @@ export async function GET() {
                     client: { select: { name: true } },
                     holding: { select: { code: true, name: true } },
                 },
-            }).catch(err => { console.error("Error in recentBookings:", err); throw err; }),
+            }).catch((err: Error) => { console.error("Error in recentBookings:", err); throw err; }),
             prisma.booking.findMany({
                 where: {
                     endDate: { gte: now, lte: nextWeek },
@@ -57,7 +57,7 @@ export async function GET() {
                     client: { select: { name: true } },
                     holding: { select: { code: true } },
                 },
-            }).catch(err => { console.error("Error in expiringBookings:", err); throw err; }),
+            }).catch((err: Error) => { console.error("Error in expiringBookings:", err); throw err; }),
         ]);
 
         console.log("[GET /api/dashboard] Stats fetched successfully.");

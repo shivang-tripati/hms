@@ -45,7 +45,7 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
                 const newValues = [...value, ...urls];
                 onChange(newValues);
             })
-            .catch((err) => {
+            .catch((err: Error) => {
                 console.error("Upload error:", err);
                 toast.error("Failed to upload one or more photos.");
             })
