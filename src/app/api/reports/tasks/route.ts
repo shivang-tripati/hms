@@ -19,19 +19,24 @@ export async function GET() {
         }),
       ]);
 
-    const statusMap = statusCounts.reduce(
+    const statusMap = statusCounts.reduce<Record<string, number>>(
       (acc, s) => {
         acc[s.status] = s._count;
         return acc;
       },
-      {} as Record<string, number>
+      {}
+    );
+
+    const totalTasks = Object.values(statusMap).reduce(
+      (sum: number, value: number) => sum + value,
+      0
     );
 
     return NextResponse.json({
       taskTypeCounts,
       completionMetrics,
       costVariance,
-      totalTasks: Object.values(statusMap).reduce((s, v) => s + v, 0),
+      totalTasks,
       completedTasks: statusMap["COMPLETED"] ?? 0,
       pendingTasks: statusMap["PENDING"] ?? 0,
       inProgressTasks: statusMap["IN_PROGRESS"] ?? 0,
