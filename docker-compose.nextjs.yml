@@ -64,17 +64,16 @@ services:
       - "traefik.http.routers.hms-router.entrypoints=web,websecure"
       - "traefik.http.routers.hms-router.tls=true"
       - "traefik.http.routers.hms-router.tls.certresolver=cert-resolver"
-      - "traefik.http.routers.hms-router.service=hms-service"
       - "traefik.http.services.hms-service.loadbalancer.server.port=3000"
       - "traefik.docker.network=cas-network"
       # Optional: Add compression middleware
       - "traefik.http.middlewares.compression.compress.enabled=true"
       # Optional: Add custom headers for security
-      - "traefik.http.middlewares.custom-headers.headers.customrequestheaders.X-Content-Type-Options=nosniff"
-      - "traefik.http.middlewares.custom-headers.headers.customrequestheaders.X-Frame-Options=DENY"
-      - "traefik.http.middlewares.custom-headers.headers.customrequestheaders.X-XSS-Protection=1; mode=block"
-      - "traefik.http.middlewares.custom-headers.headers.customrequestheaders.Referrer-Policy=strict-origin-when-cross-origin"
-      - "traefik.http.middlewares.custom-headers.headers.customrequestheaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self';"
+      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-Frame-Options=DENY"
+      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self';"
 
       # Optional: Rate limiting
       - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
