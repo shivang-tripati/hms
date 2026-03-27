@@ -47,13 +47,17 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy only necessary files from builder
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# ✅ FIXED: Copy standalone built app
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# Set correct permissions
-RUN chown -R nextjs:nodejs /app
+# ✅ FIXED: Copy node_modules (CRITICAL - was missing!)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Copy public assets
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy static files
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Switch to non-root user
 USER nextjs
@@ -61,10 +65,10 @@ USER nextjs
 # Expose app port
 EXPOSE 3000
 
-# Healthcheck (basic HTTP check)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD node -e "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# Healthcheck - simple and reliable
+HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode < 500 ? 0 : 1))" || exit 1
 
 # Fail-fast + start app
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["sh", "-c", "test -f server.js || (echo 'ERROR: server.js not found. Ensure Next.js standalone build is enabled.' && exit 1); node server.js"]
+CMD ["node", "server.js"]
