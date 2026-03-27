@@ -62,9 +62,10 @@ services:
       - "traefik.enable=true"
       # Main router for next.js app
       - "traefik.http.routers.hms-router.rule=Host(`hms.radhakrishnajewellery.in`)"
-      - "traefik.http.routers.hms-router.entrypoints=web, websecure"
+      - "traefik.http.routers.hms-router.entrypoints=web,websecure"
       - "traefik.http.routers.hms-router.tls=true"
       - "traefik.http.routers.hms-router.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.hms-router.service=hms-service"
       - "traefik.http.services.hms-service.loadbalancer.server.port=3000"
       - "traefik.docker.network=cas-network"
       # Optional: Add compression middleware
