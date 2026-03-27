@@ -21,13 +21,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
     networks:
-      - cas-network 
-
+      - cas-network
     labels:
       - "traefik.enable=false"
-      
 
   hms-app:
     build:
@@ -49,47 +46,44 @@ services:
     volumes:
       - ./uploads:/app/public/uploads
       - ./logs:/app/logs
-
+    
+    # FIXED: More reliable healthcheck for Next.js
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
     labels:
       - "traefik.enable=true"
-      # Main router for next.js app
       - "traefik.http.routers.hms-router.rule=Host(`hms.radhakrishnajewellery.in`)"
       - "traefik.http.routers.hms-router.entrypoints=web,websecure"
       - "traefik.http.routers.hms-router.tls=true"
       - "traefik.http.routers.hms-router.tls.certresolver=cert-resolver"
+      - "traefik.http.routers.hms-router.middlewares=compression,custom-headers"
       - "traefik.http.services.hms-service.loadbalancer.server.port=3000"
       - "traefik.docker.network=cas-network"
-      # Optional: Add compression middleware
+      
+      # Compression middleware
       - "traefik.http.middlewares.compression.compress.enabled=true"
-      # Optional: Add custom headers for security
+      
+      # Security headers
       - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
       - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-Frame-Options=DENY"
       - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
       - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.Referrer-Policy=strict-origin-when-cross-origin"
-      - "traefik.http.middlewares.custom-headers.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self';"
-
-      # Optional: Rate limiting
-      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
-      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
 
     networks:
-      - cas-network 
-      
-      
+      - cas-network
 
 volumes:
   postgres_data:
     driver: local
 
-
 networks:
+  # FIXED: Remove external declaration if Traefik creates it
+  # If Traefik is in separate docker-compose.yml, keep external: true
   cas-network:
     external: true
     name: cas-network
