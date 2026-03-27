@@ -18,11 +18,11 @@ WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
 
-# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy source code
 COPY . .
+
+RUN npx prisma generate
 
 # Build Next.js (standalone)
 RUN npm run build && \
@@ -35,7 +35,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Install minimal runtime deps
-RUN apk add --no-cache dumb-init libc6-compat
+RUN apk add --no-cache dumb-init libc6-compat openssl
 
 # Environment variables
 ENV NODE_ENV=production

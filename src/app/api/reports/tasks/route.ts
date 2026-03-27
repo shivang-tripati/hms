@@ -27,8 +27,8 @@ export async function GET() {
       {}
     );
 
-    const totalTasks = Object.values(statusMap).reduce(
-      (sum: number, value: number) => sum + value,
+    const totalTasks = (Object.values(statusMap) as number[]).reduce(
+      (sum, value) => sum + value,
       0
     );
 
