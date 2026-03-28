@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Plus, Receipt, FileText } from "lucide-react";

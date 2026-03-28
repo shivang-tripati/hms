@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { ContractForm } from "@/components/contracts/contract-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { apiFetch } from "@/lib/api";

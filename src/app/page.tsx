@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { auth } from "@/auth";
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard";
 import { StaffDashboard } from "@/components/dashboard/staff-dashboard";

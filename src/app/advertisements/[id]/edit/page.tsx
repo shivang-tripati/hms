@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { AdvertisementForm } from "@/components/advertisements/advertisement-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { apiFetch } from "@/lib/api";

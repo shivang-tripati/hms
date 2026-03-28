@@ -16,7 +16,7 @@ export async function apiFetch<T = unknown>(
 
     // Handle server-side relative URLs
     if (typeof window === "undefined" && url.startsWith("/")) {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
         finalUrl = `${baseUrl}${url}`;
     }
 
@@ -39,6 +39,7 @@ export async function apiFetch<T = unknown>(
     }
 
     const res = await fetch(finalUrl, {
+        cache: 'no-store',
         ...options,
         headers,
     });
