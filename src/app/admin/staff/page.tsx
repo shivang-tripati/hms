@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { apiFetch } from "@/lib/api";
 import { StaffList } from "@/components/admin/staff-list";
 import { AddStaffModal } from "@/components/admin/add-staff-modal";

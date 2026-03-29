@@ -61,7 +61,7 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
                         <MapPinned className="h-5 w-5 text-white" />
                     </div>
                     <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                        HMS Pro
+                        HMS
                     </span>
                 </div>
             </div>

@@ -97,9 +97,9 @@ export function Header() {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-lg">Profile</DropdownMenuItem>
+                        {/* <DropdownMenuItem className="rounded-lg">Profile</DropdownMenuItem>
                         <DropdownMenuItem className="rounded-lg">Settings</DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator /> */}
                         <DropdownMenuItem
                             className="rounded-lg text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-900/10 cursor-pointer"
                             onClick={() => logout()}

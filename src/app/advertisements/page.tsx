@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { DataTable } from "@/components/shared/data-table";

@@ -77,6 +77,26 @@ services:
     networks:
       - cas-network
 
+
+  hms-nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    expose:
+      - "80"
+    volumes:
+      - ./uploads:/usr/share/nginx/html/uploads:ro 
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hms-uploads-router.rule=Host(`hms.radhakrishnajewellery.in`) && PathPrefix(`/uploads`)"
+      - "traefik.http.routers.hms-uploads-router.entrypoints=web,websecure"
+      - "traefik.http.routers.hms-uploads-router.tls=true"
+      - "traefik.http.routers.hms-uploads-router.tls.certresolver=cert-resolver"
+      - "traefik.http.routers.hms-uploads-router.priority=100"
+      - "traefik.http.services.hms-nginx-service.loadbalancer.server.port=80"
+      - "traefik.docker.network=cas-network"
+    networks:
+      - cas-network
+
 volumes:
   postgres_data:
     driver: local

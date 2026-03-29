@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { notFound, redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";

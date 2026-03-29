@@ -34,10 +34,11 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
                 body: formData,
             });
             if (!response.ok) {
-                throw new Error("Upload failed");
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err?.error || "Upload failed");
             }
             const data = await response.json();
-            return data.url;
+            return data.url as string;
         });
 
         Promise.all(promises)

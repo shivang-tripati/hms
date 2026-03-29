@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { apiFetch } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CityManagement } from "@/components/master-data/city-management";
@@ -7,9 +8,9 @@ import { MapPin, Layers, Hash } from "lucide-react";
 
 export default async function MasterDataPage() {
     const [cities, holdingTypes, hsnCodes] = await Promise.all([
-        apiFetch<any[]>("/api/master-data/cities"),
-        apiFetch<any[]>("/api/master-data/holding-types"),
-        apiFetch<any[]>("/api/master-data/hsn-codes"),
+        apiFetch<any[]>("/api/master-data/cities", { revalidate: 60 }),
+        apiFetch<any[]>("/api/master-data/holding-types", { revalidate: 60 }),
+        apiFetch<any[]>("/api/master-data/hsn-codes", { revalidate: 60 }),
     ]);
 
     return (

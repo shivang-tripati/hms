@@ -8,10 +8,19 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            const isApiAuthRoute = nextUrl.pathname.startsWith("/api/auth");
-            const isPublicRoute = ["/login"].includes(nextUrl.pathname);
+            const pathname = nextUrl.pathname;
 
-            if (isApiAuthRoute) return true;
+            const isStaticAsset =
+                pathname.startsWith("/_next") ||
+                pathname.startsWith("/favicon.ico") ||
+                pathname.startsWith("/hms.png") ||
+                pathname.startsWith("/images") ||
+                pathname.match(/\.(png|jpg|jpeg|gif|svg|webp)$/);
+
+            const isApiAuthRoute = pathname.startsWith("/api/auth");
+            const isPublicRoute = ["/login"].includes(pathname);
+
+            if (isApiAuthRoute || isStaticAsset) return true;
 
             if (isPublicRoute) {
                 if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));
@@ -24,26 +33,14 @@ export const authConfig = {
             const role = (auth.user as any)?.role;
             if (isLoggedIn && role === "STAFF") {
                 const allowedPaths = ["/", "/tasks", "/suggestions", "/api"];
-                const isAllowed = allowedPaths.some(path => nextUrl.pathname === path || nextUrl.pathname.startsWith(path));
+                const isAllowed = allowedPaths.some(path =>
+                    nextUrl.pathname === path || nextUrl.pathname.startsWith(path)
+                );
                 if (!isAllowed) return Response.redirect(new URL("/", nextUrl));
             }
 
             return true;
         },
-        async jwt({ token, user }) {
-            if (user) {
-                token.role = (user as any).role;
-                token.id = user.id;
-            }
-            return token;
-        },
-        async session({ session, token }) {
-            if (token.role) {
-                session.user.role = token.role as any;
-                session.user.id = token.id as string;
-            }
-            return session;
-        },
     },
-    providers: [], // Providers added in auth.ts
+    providers: [],
 } satisfies NextAuthConfig;

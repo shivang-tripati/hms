@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { BookingForm } from "@/components/bookings/booking-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { apiFetch } from "@/lib/api";

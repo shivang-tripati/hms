@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function HoldingsPage() {
-    const holdings = await apiFetch<any[]>("/api/holdings");
+    const holdings = await apiFetch<any[]>("/api/holdings", { revalidate: 60 });
 
     return (
         <div className="space-y-6">
