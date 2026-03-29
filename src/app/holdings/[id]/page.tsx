@@ -9,6 +9,7 @@ import { formatArea, formatDate, formatEnum } from "@/lib/utils";
 import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { auth } from "@/auth";
 
 interface HoldingDetailsPageProps {
     params: {
@@ -17,6 +18,8 @@ interface HoldingDetailsPageProps {
 }
 
 export default async function HoldingDetailsPage({ params }: HoldingDetailsPageProps) {
+    const session = await auth();
+    const role = session?.user?.role;
     const { id } = await params;
     let holding: any;
     try {
@@ -47,11 +50,13 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={holding.status} />
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/holdings/${id}/edit`}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                    </Button>
+                    {role === "ADMIN" && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/holdings/${id}/edit`}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </Link>
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -102,39 +107,41 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </Card>
 
                 {/* Booking Status Card */}
-                <Card className="col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <CalendarClock className="h-4 w-4" /> Current Booking
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {holding.bookings.length > 0 ? (
-                            <div className="space-y-3">
-                                <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-                                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Current Client</p>
-                                    <p className="font-bold text-primary">{holding.bookings[0].client.name}</p>
-                                    <p className="text-sm mt-1">Ends on {formatDate(holding.bookings[0].endDate)}</p>
+                {role === "ADMIN" && (
+                    <Card className="col-span-1">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <CalendarClock className="h-4 w-4" /> Current Booking
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {holding.bookings.length > 0 ? (
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                                        <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Current Client</p>
+                                        <p className="font-bold text-primary">{holding.bookings[0].client.name}</p>
+                                        <p className="text-sm mt-1">Ends on {formatDate(holding.bookings[0].endDate)}</p>
+                                    </div>
+                                    <Button asChild variant="outline" className="w-full" size="sm">
+                                        <Link href={`/bookings/${holding.bookings[0].id}`}>View Details</Link>
+                                    </Button>
                                 </div>
-                                <Button asChild variant="outline" className="w-full" size="sm">
-                                    <Link href={`/bookings/${holding.bookings[0].id}`}>View Details</Link>
-                                </Button>
+                            ) : (
+                                <div className="text-center py-6 space-y-3">
+                                    <p className="text-sm text-muted-foreground">This holding is currently available.</p>
+                                    <Button asChild className="w-full">
+                                        <Link href={`/bookings/new?holdingId=${id}`}>Book Now</Link>
+                                    </Button>
+                                </div>
+                            )}
+                            <Separator />
+                            <div>
+                                <p className="text-sm font-medium mb-1">Notes</p>
+                                <p className="text-sm text-muted-foreground">{holding.notes || "No notes available for this holding."}</p>
                             </div>
-                        ) : (
-                            <div className="text-center py-6 space-y-3">
-                                <p className="text-sm text-muted-foreground">This holding is currently available.</p>
-                                <Button asChild className="w-full">
-                                    <Link href={`/bookings/new?holdingId=${id}`}>Book Now</Link>
-                                </Button>
-                            </div>
-                        )}
-                        <Separator />
-                        <div>
-                            <p className="text-sm font-medium mb-1">Notes</p>
-                            <p className="text-sm text-muted-foreground">{holding.notes || "No notes available for this holding."}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );

@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { SuggestionStatusActions } from "@/components/suggestions/suggestion-status-actions";
 import { PhotoGallery } from "@/components/shared/photo-gallery";
+import { auth } from "@/auth";
 
 interface SuggestionDetailsPageProps {
     params: {
@@ -19,6 +20,8 @@ interface SuggestionDetailsPageProps {
 }
 
 export default async function SuggestionDetailsPage({ params }: SuggestionDetailsPageProps) {
+    const session = await auth();
+    const role = session?.user?.role;
     const { id } = await params;
 
     let suggestion: any;
@@ -43,10 +46,10 @@ export default async function SuggestionDetailsPage({ params }: SuggestionDetail
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={suggestion.status} />
-                    {suggestion.status === "PENDING" && (
+                    {role === "ADMIN" && suggestion.status === "PENDING" && (
                         <SuggestionStatusActions id={id} />
                     )}
-                    {suggestion.status === "ACCEPTED" && (
+                    {role === "ADMIN" && suggestion.status === "ACCEPTED" && (
                         <Button asChild size="sm">
                             <Link href={`/holdings/new?suggestionId=${suggestion.id}&address=${encodeURIComponent(suggestion.address)}&cityId=${suggestion.cityId}&lat=${suggestion.latitude}&lng=${suggestion.longitude}`}>
                                 Convert to Holding <ArrowRight className="ml-2 h-4 w-4" />
