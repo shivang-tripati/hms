@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import fs from "fs";
 import { randomUUID } from "crypto";
 
 export async function POST(req: NextRequest) {
