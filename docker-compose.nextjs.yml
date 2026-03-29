@@ -92,8 +92,6 @@ services:
       - "traefik.http.routers.hms-uploads-router.tls=true"
       - "traefik.http.routers.hms-uploads-router.tls.certresolver=cert-resolver"
       - "traefik.http.routers.hms-uploads-router.priority=100"
-      - "traefik.http.routers.hms-uploads-router.middlewares=hms-uploads-strip"
-      - "traefik.http.middlewares.hms-uploads-strip.stripprefix.prefixes=/uploads"
       - "traefik.http.services.hms-nginx-service.loadbalancer.server.port=80"
       - "traefik.docker.network=cas-network"
     networks:
