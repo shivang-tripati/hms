@@ -42,7 +42,9 @@ export async function GET(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    return NextResponse.json(invoice);
+    const settings = await prisma.companySettings.findFirst();
+
+    return NextResponse.json({ ...invoice, settings });
   } catch (error) {
     console.error("[GET /api/invoices/[id]/print]", error);
     return NextResponse.json(

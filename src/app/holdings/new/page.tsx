@@ -14,6 +14,7 @@ interface NewHoldingPageProps {
         cityId?: string;
         lat?: string;
         lng?: string;
+        landmark?: string;
         [key: string]: string | string[] | undefined;
     };
 }
@@ -27,10 +28,12 @@ export default async function NewHoldingPage({ searchParams }: NewHoldingPagePro
 
     // Construct partial initial data from search params if available
     const initialData: any = {};
-    if (searchParams.address) initialData.address = decodeURIComponent(searchParams.address as string);
-    if (searchParams.cityId) initialData.cityId = searchParams.cityId as string;
-    if (searchParams.lat) initialData.latitude = Number(searchParams.lat) as any;
-    if (searchParams.lng) initialData.longitude = Number(searchParams.lng) as any;
+    const params = await searchParams;
+    if (params.address) initialData.address = decodeURIComponent(params.address as string);
+    if (params.cityId) initialData.cityId = params.cityId as string;
+    if (params.lat) initialData.latitude = Number(params.lat) as any;
+    if (params.lng) initialData.longitude = Number(params.lng) as any;
+    if (params.landmark) initialData.landmark = decodeURIComponent(params.landmark as string);
 
     // Note: We use 'as any' for Decimal/Number compatibility in initialData partial
 

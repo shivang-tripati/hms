@@ -62,6 +62,7 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
   const client = invoice.client;
   const hsnCode = invoice.hsnCode;
   const booking = invoice.booking;
+  const settings = invoice.settings || {};
 
   // Date formatting
   const fmtDate = (d: string) => {
@@ -135,10 +136,10 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6mm" }}>
           <div>
             <h1 style={{ fontSize: "20pt", fontWeight: 800, color: "#1a1a2e", margin: 0 }}>
-              Supreme Media Advertising
+              {settings.companyName || "Supreme Media Advertising"}
             </h1>
             <p style={{ fontSize: "9pt", color: "#555", margin: "2mm 0 0 0", letterSpacing: "1.5px" }}>
-              Creative &bull; Innovative &bull; Positive
+              {settings.tagline || "Creative • Innovative • Positive"}
             </p>
           </div>
         </div>
@@ -224,16 +225,20 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
               Issued By :
             </p>
             <p style={{ fontWeight: 700, fontSize: "11pt" }}>
-              Supreme Media Advertising
+              {settings.companyName || "Supreme Media Advertising"}
             </p>
+            {settings.gstNo && (
+              <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
+                GST No.: {settings.gstNo}
+              </p>
+            )}
+            {settings.panNo && (
+              <p style={{ fontSize: "9.5pt", color: "#333" }}>
+                PAN No.: {settings.panNo}
+              </p>
+            )}
             <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
-              GST No.: 16BBSPB2699J1Z4
-            </p>
-            <p style={{ fontSize: "9.5pt", color: "#333" }}>
-              PAN No.: BBSPB2699J
-            </p>
-            <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
-              Post Office Chowmuhani, Agartala, Tripura (W)
+              {settings.address || "Post Office Chowmuhani, Agartala, Tripura (W)"}
             </p>
           </div>
         </div>
@@ -406,14 +411,22 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
               Terms & Conditions:
             </p>
             <ol style={{ margin: 0, paddingLeft: "4mm", lineHeight: 1.6 }}>
-              <li>Space once sold will not be taken back.</li>
-              <li>
-                Flex Mounting charges will be free 4 times in a year.
-                After that, Rs. 3/- will be charged for every mounting.
-              </li>
-              <li>Subject to local jurisdiction only.</li>
-              <li>Payment should be made within 5 days of the bill&apos;s issue.</li>
-              <li>Any disputes should be resolved amicably.</li>
+              {settings.terms && settings.terms.length > 0 ? (
+                settings.terms.map((term: string, index: number) => (
+                  <li key={index}>{term}</li>
+                ))
+              ) : (
+                <>
+                  <li>Space once sold will not be taken back.</li>
+                  <li>
+                    Flex Mounting charges will be free 4 times in a year.
+                    After that, Rs. 3/- will be charged for every mounting.
+                  </li>
+                  <li>Subject to local jurisdiction only.</li>
+                  <li>Payment should be made within 5 days of the bill&apos;s issue.</li>
+                  <li>Any disputes should be resolved amicably.</li>
+                </>
+              )}
             </ol>
           </div>
 
@@ -430,17 +443,26 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
             }}
           >
             <p style={{ fontSize: "10pt", fontWeight: 600 }}>
-              Supreme Media Advertising
+              {settings.signatoryName || "Supreme Media Advertising"}
             </p>
             <div style={{ marginTop: "12mm", marginBottom: "2mm" }}>
-              <div
-                style={{
-                  width: "30mm",
-                  height: "0.5mm",
-                  backgroundColor: "#333",
-                  margin: "0 auto",
-                }}
-              ></div>
+              {settings.signatureUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                  src={settings.signatureUrl} 
+                  alt="Signature" 
+                  style={{ maxHeight: "15mm", maxWidth: "40mm", marginBottom: "2mm", objectFit: "contain" }} 
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "30mm",
+                    height: "0.5mm",
+                    backgroundColor: "#333",
+                    margin: "0 auto",
+                  }}
+                ></div>
+              )}
               <p style={{ fontSize: "9pt", fontWeight: 600, marginTop: "1mm" }}>
                 Authorized Signatory
               </p>
@@ -458,17 +480,17 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
           }}
         >
           <p style={{ fontWeight: 700, marginBottom: "1mm" }}>
-            &ldquo;Supreme Media Advertising&rdquo;
+            &ldquo;{settings.companyName || "Supreme Media Advertising"}&rdquo;
           </p>
           <p>Bank account details are given below:</p>
-          <p>Bank: State Bank Of India (SBI)</p>
-          <p>Account holder name: SUPREME MEDIA ADVERTISING</p>
-          <p>Account Number: 36369322514</p>
-          <p>IFSC CODE: SBIN0009126</p>
-          <p>MICR CODE: 799002007</p>
-          <p>BRANCH CODE: 09126</p>
+          <p>Bank: {settings.bankName || "State Bank Of India (SBI)"}</p>
+          <p>Account holder name: {settings.accountName || "SUPREME MEDIA ADVERTISING"}</p>
+          <p>Account Number: {settings.accountNumber || "36369322514"}</p>
+          <p>IFSC CODE: {settings.ifscCode || "SBIN0009126"}</p>
+          <p>MICR CODE: {settings.micrCode || "799002007"}</p>
+          <p>BRANCH CODE: {settings.branchCode || "09126"}</p>
           <p style={{ fontWeight: 600 }}>
-            SBI MBB COLLEGE BRANCH, MATH CHOWMUHANI, AGARTALA, TRIPURA (W) PIN-799007
+            {settings.bankAddress || "SBI MBB COLLEGE BRANCH, MATH CHOWMUHANI, AGARTALA, TRIPURA (W) PIN-799007"}
           </p>
         </div>
 
@@ -485,13 +507,12 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
           }}
         >
           <p>
-            Agartala Office: 45 HGB Road, Post Office Chowmuhani, Opp to Sarkar
-            Nursing Home, Singh Para, Rimpon International Building 3rd Floor,
-            Upstairs Of Times 24 Network, Agartala, Tripura (W) PIN: 799001
+            {settings.footerAddress || "Agartala Office: 45 HGB Road, Post Office Chowmuhani, Opp to Sarkar Nursing Home, Singh Para, Rimpon International Building 3rd Floor, Upstairs Of Times 24 Network, Agartala, Tripura (W) PIN: 799001"}
           </p>
           <p style={{ marginTop: "1mm" }}>
-            <strong>www.suprememedia.co.in</strong> &nbsp;&bull;&nbsp;{" "}
-            <strong>Call: 82580-05500</strong>
+            {settings.website && <strong>{settings.website}</strong>}
+            {settings.website && settings.phone && <span> &nbsp;&bull;&nbsp; </span>}
+            {settings.phone && <strong>{settings.phone}</strong>}
           </p>
         </div>
       </div>

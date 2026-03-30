@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Moon, Sun, LogOut, Menu } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -44,7 +45,7 @@ export function Header() {
 
                 <div>
                     <h2 className="text-lg font-semibold tracking-tight">
-                        HMS Pro
+                        HMS
                     </h2>
                     <p className="text-xs text-muted-foreground hidden sm:block">
                         {userRole === "ADMIN" ? "Administrator Portal" : "Staff Portal"}
@@ -97,9 +98,10 @@ export function Header() {
                             </div>
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {/* <DropdownMenuItem className="rounded-lg">Profile</DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-lg">Settings</DropdownMenuItem>
-                        <DropdownMenuSeparator /> */}
+                        <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                            <Link href="/settings">Settings</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="rounded-lg text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-900/10 cursor-pointer"
                             onClick={() => logout()}

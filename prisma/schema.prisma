@@ -6,94 +6,516 @@ datasource db {
   provider = "postgresql"
 }
 
-// ─── Master Data ────────────────────────────────────────────────────────────────
-
 model City {
-  id        String   @id @default(cuid())
-  name      String
-  state     String
-  country   String   @default("India")
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  holdings Holding[]
-  clients  Client[]
-  vendors  Vendor[]
+  id                  String               @id @default(cuid())
+  name                String
+  state               String
+  country             String               @default("India")
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  clients             Client[]
+  holdings            Holding[]
   locationSuggestions LocationSuggestion[]
+  vendors             Vendor[]
 
   @@unique([name, state])
   @@map("cities")
 }
 
 model HoldingType {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String    @id @default(cuid())
+  name        String    @unique
   description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  holdings Holding[]
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  holdings    Holding[]
 
   @@map("holding_types")
 }
 
 model HsnCode {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  description String
-  gstRate     Decimal  @db.Decimal(5, 2)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
+  id           String        @id @default(cuid())
+  code         String        @unique
+  description  String
+  gstRate      Decimal       @db.Decimal(5, 2)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   holdings     Holding[]
-  invoices     Invoice[]
   invoiceItems InvoiceItem[]
+  invoices     Invoice[]
 
   @@map("hsn_codes")
 }
 
-// ─── Holdings ───────────────────────────────────────────────────────────────────
-
 model Holding {
-  id                String        @id @default(cuid())
-  code              String        @unique
-  name              String
-  address           String
-  latitude          Decimal?      @db.Decimal(10, 7)
-  longitude         Decimal?      @db.Decimal(10, 7)
-  width             Decimal       @db.Decimal(10, 2)
-  height            Decimal       @db.Decimal(10, 2)
-  totalArea         Decimal       @db.Decimal(10, 2)
-  illumination      Illumination  @default(NON_LIT)
-  facing            String?
-  landmark          String?
-  status            HoldingStatus @default(AVAILABLE)
-  maintenanceCycle  Int           @default(90) // days
-  notes             String?
-
-  cityId        String
-  holdingTypeId String
-  hsnCodeId     String
-
-  city        City        @relation(fields: [cityId], references: [id])
-  holdingType HoldingType @relation(fields: [holdingTypeId], references: [id])
-  hsnCode     HsnCode     @relation(fields: [hsnCodeId], references: [id])
-
-  ownershipContracts OwnershipContract[]
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  address            String
+  latitude           Decimal?            @db.Decimal(10, 7)
+  longitude          Decimal?            @db.Decimal(10, 7)
+  width              Decimal             @db.Decimal(10, 2)
+  height             Decimal             @db.Decimal(10, 2)
+  totalArea          Decimal             @db.Decimal(10, 2)
+  illumination       Illumination        @default(NON_LIT)
+  facing             String?
+  landmark           String?
+  status             HoldingStatus       @default(AVAILABLE)
+  maintenanceCycle   Int                 @default(90)
+  notes              String?
+  cityId             String
+  holdingTypeId      String
+  hsnCodeId          String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
   bookings           Booking[]
-  tasks              Task[]
+  city               City                @relation(fields: [cityId], references: [id])
+  holdingType        HoldingType         @relation(fields: [holdingTypeId], references: [id])
+  hsnCode            HsnCode             @relation(fields: [hsnCodeId], references: [id])
   inspections        Inspection[]
   maintenanceRecords MaintenanceRecord[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ownershipContracts OwnershipContract[]
+  tasks              Task[]
 
   @@index([status])
   @@index([cityId])
   @@map("holdings")
+}
+
+model OwnershipContract {
+  id              String         @id @default(cuid())
+  contractNumber  String         @unique
+  ownerName       String
+  ownerType       OwnerType
+  ownerContact    String?
+  ownerEmail      String?
+  ownerAddress    String?
+  rentAmount      Decimal        @db.Decimal(12, 2)
+  rentCycle       RentCycle      @default(MONTHLY)
+  startDate       DateTime
+  endDate         DateTime
+  securityDeposit Decimal?       @db.Decimal(12, 2)
+  status          ContractStatus @default(ACTIVE)
+  notes           String?
+  holdingId       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  holding         Holding        @relation(fields: [holdingId], references: [id])
+  vendors         Vendor[]
+
+  @@map("ownership_contracts")
+}
+
+model Client {
+  id            String    @id @default(cuid())
+  name          String
+  contactPerson String
+  email         String?
+  phone         String
+  gstNumber     String?
+  panNumber     String?
+  address       String
+  isActive      Boolean   @default(true)
+  cityId        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ledgerId      String?
+  bookings      Booking[]
+  city          City?     @relation(fields: [cityId], references: [id])
+  ledger        Ledger?   @relation(fields: [ledgerId], references: [id])
+  invoices      Invoice[]
+  receipts      Receipt[]
+
+  @@map("clients")
+}
+
+model Booking {
+  id             String          @id @default(cuid())
+  bookingNumber  String          @unique
+  startDate      DateTime
+  endDate        DateTime
+  monthlyRate    Decimal         @db.Decimal(12, 2)
+  totalAmount    Decimal         @db.Decimal(12, 2)
+  billingCycle   BillingCycle    @default(MONTHLY)
+  status         BookingStatus   @default(CONFIRMED)
+  notes          String?
+  clientId       String
+  holdingId      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  freeMountings  Int             @default(0)
+  totalMountings Int             @default(0)
+  advertisements Advertisement[]
+  client         Client          @relation(fields: [clientId], references: [id])
+  holding        Holding         @relation(fields: [holdingId], references: [id])
+  invoices       Invoice[]
+
+  @@index([clientId])
+  @@index([holdingId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdAt])
+  @@map("bookings")
+}
+
+model Advertisement {
+  id                 String    @id @default(cuid())
+  campaignName       String
+  brandName          String
+  artworkDescription String?
+  artworkUrl         String?
+  installationDate   DateTime?
+  removalDate        DateTime?
+  status             AdStatus  @default(PENDING)
+  notes              String?
+  bookingId          String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  booking            Booking   @relation(fields: [bookingId], references: [id])
+  tasks              Task[]
+
+  @@map("advertisements")
+}
+
+model Task {
+  id              String          @id @default(cuid())
+  title           String
+  description     String?
+  taskType        TaskType
+  priority        Priority        @default(MEDIUM)
+  status          TaskStatus      @default(PENDING)
+  scheduledDate   DateTime
+  completedDate   DateTime?
+  estimatedCost   Decimal?        @db.Decimal(12, 2)
+  actualCost      Decimal?        @db.Decimal(12, 2)
+  notes           String?
+  holdingId       String?
+  advertisementId String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  assignedToId    String?
+  executions      TaskExecution[]
+  advertisement   Advertisement?  @relation(fields: [advertisementId], references: [id])
+  assignedTo      User?           @relation("AssignedToUser", fields: [assignedToId], references: [id])
+  holding         Holding?        @relation(fields: [holdingId], references: [id])
+
+  @@index([taskType])
+  @@index([status])
+  @@index([holdingId])
+  @@index([scheduledDate])
+  @@index([taskType, status])
+  @@map("tasks")
+}
+
+model TaskExecution {
+  id            String           @id @default(cuid())
+  taskId        String
+  performedById String
+  status        TaskStatus?
+  condition     HoldingCondition
+  remarks       String?
+  latitude      Decimal          @db.Decimal(10, 7)
+  longitude     Decimal          @db.Decimal(10, 7)
+  frontViewUrl  String
+  leftViewUrl   String
+  rightViewUrl  String
+  createdAt     DateTime         @default(now())
+  performedBy   User             @relation(fields: [performedById], references: [id])
+  task          Task             @relation(fields: [taskId], references: [id])
+
+  @@map("task_executions")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String          @unique
+  password       String
+  plainPassword  String?
+  role           UserRole        @default(STAFF)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  taskExecutions TaskExecution[]
+  assignedTasks  Task[]          @relation("AssignedToUser")
+
+  @@map("users")
+}
+
+model Inspection {
+  id             String            @id @default(cuid())
+  inspectionDate DateTime
+  inspectorName  String
+  condition      HoldingCondition
+  illuminationOk Boolean           @default(true)
+  structureOk    Boolean           @default(true)
+  visibilityOk   Boolean           @default(true)
+  remarks        String?
+  holdingId      String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  photos         InspectionPhoto[]
+  holding        Holding           @relation(fields: [holdingId], references: [id])
+
+  @@map("inspections")
+}
+
+model InspectionPhoto {
+  id           String     @id @default(cuid())
+  url          String
+  caption      String?
+  inspectionId String
+  createdAt    DateTime   @default(now())
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+
+  @@map("inspection_photos")
+}
+
+model MaintenanceRecord {
+  id              String            @id @default(cuid())
+  maintenanceType MaintenanceType
+  description     String
+  cost            Decimal           @db.Decimal(12, 2)
+  performedDate   DateTime
+  performedBy     String
+  status          MaintenanceStatus @default(COMPLETED)
+  notes           String?
+  holdingId       String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  holding         Holding           @relation(fields: [holdingId], references: [id])
+
+  @@index([holdingId])
+  @@index([status])
+  @@index([performedDate])
+  @@index([maintenanceType])
+  @@map("maintenance_records")
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  invoiceNumber  String        @unique
+  invoiceDate    DateTime
+  dueDate        DateTime
+  subtotal       Decimal       @db.Decimal(12, 2)
+  cgstRate       Decimal       @db.Decimal(5, 2)
+  sgstRate       Decimal       @db.Decimal(5, 2)
+  igstRate       Decimal       @default(0) @db.Decimal(5, 2)
+  cgstAmount     Decimal       @db.Decimal(12, 2)
+  sgstAmount     Decimal       @db.Decimal(12, 2)
+  igstAmount     Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount    Decimal       @db.Decimal(12, 2)
+  paidAmount     Decimal       @default(0) @db.Decimal(12, 2)
+  status         InvoiceStatus @default(DRAFT)
+  notes          String?
+  clientId       String
+  bookingId      String
+  hsnCodeId      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  journalEntryId String?
+  items          InvoiceItem[]
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  client         Client        @relation(fields: [clientId], references: [id])
+  hsnCode        HsnCode       @relation(fields: [hsnCodeId], references: [id])
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  receipts       Receipt[]
+
+  @@index([clientId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  hsnCodeId   String
+  quantity    Decimal  @db.Decimal(10, 2)
+  rate        Decimal  @db.Decimal(12, 2)
+  amount      Decimal  @db.Decimal(12, 2)
+  gstRate     Decimal  @db.Decimal(5, 2)
+  gstAmount   Decimal  @db.Decimal(12, 2)
+  total       Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hsnCode     HsnCode  @relation(fields: [hsnCodeId], references: [id])
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Receipt {
+  id               String        @id @default(cuid())
+  receiptNumber    String        @unique
+  receiptDate      DateTime
+  amount           Decimal       @db.Decimal(12, 2)
+  paymentMode      PaymentMode
+  referenceNo      String?
+  notes            String?
+  clientId         String
+  invoiceId        String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  cashBankLedgerId String
+  journalEntryId   String?
+  cashBankLedger   Ledger        @relation("ReceiptCashBankLedger", fields: [cashBankLedgerId], references: [id])
+  client           Client        @relation(fields: [clientId], references: [id])
+  invoice          Invoice       @relation(fields: [invoiceId], references: [id])
+  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
+
+  @@map("receipts")
+}
+
+model Ledger {
+  id              String        @id @default(cuid())
+  name            String        @unique
+  code            String        @unique
+  type            LedgerType
+  isGroup         Boolean       @default(false)
+  parentId        String?
+  isCash          Boolean       @default(false)
+  isBank          Boolean       @default(false)
+  isReceivable    Boolean       @default(false)
+  isPayable       Boolean       @default(false)
+  isRevenue       Boolean       @default(false)
+  isTaxOutput     Boolean       @default(false)
+  isTaxInput      Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  clients         Client[]
+  journalLines    JournalLine[]
+  parent          Ledger?       @relation("LedgerParent", fields: [parentId], references: [id])
+  children        Ledger[]      @relation("LedgerParent")
+  paymentCashBank Payment[]     @relation("PaymentCashBankLedger")
+  receiptCashBank Receipt[]     @relation("ReceiptCashBankLedger")
+  vendors         Vendor[]      @relation("VendorLedger")
+
+  @@map("ledgers")
+}
+
+model JournalEntry {
+  id          String        @id @default(cuid())
+  entryNumber String        @unique
+  entryDate   DateTime
+  description String?
+  source      JournalSource
+  sourceId    String?
+  status      JournalStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  invoices    Invoice[]
+  lines       JournalLine[]
+  payments    Payment[]
+  receipts    Receipt[]
+
+  @@map("journal_entries")
+}
+
+model JournalLine {
+  id          String       @id @default(cuid())
+  journalId   String
+  ledgerId    String
+  debit       Decimal?     @db.Decimal(12, 2)
+  credit      Decimal?     @db.Decimal(12, 2)
+  description String?
+  journal     JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  ledger      Ledger       @relation(fields: [ledgerId], references: [id])
+
+  @@map("journal_lines")
+}
+
+model Vendor {
+  id                  String             @id @default(cuid())
+  name                String
+  contactPerson       String?
+  email               String?
+  phone               String
+  gstNumber           String?
+  panNumber           String?
+  address             String
+  isActive            Boolean            @default(true)
+  ownershipContractId String?
+  cityId              String?
+  ledgerId            String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  payments            Payment[]
+  city                City?              @relation(fields: [cityId], references: [id])
+  ledger              Ledger             @relation("VendorLedger", fields: [ledgerId], references: [id])
+  ownershipContract   OwnershipContract? @relation(fields: [ownershipContractId], references: [id])
+
+  @@map("vendors")
+}
+
+model Payment {
+  id               String        @id @default(cuid())
+  paymentNumber    String        @unique
+  paymentDate      DateTime
+  amount           Decimal       @db.Decimal(12, 2)
+  paymentMode      PaymentMode
+  referenceNo      String?
+  notes            String?
+  vendorId         String
+  cashBankLedgerId String
+  journalEntryId   String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  cashBankLedger   Ledger        @relation("PaymentCashBankLedger", fields: [cashBankLedgerId], references: [id])
+  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  vendor           Vendor        @relation(fields: [vendorId], references: [id])
+
+  @@map("payments")
+}
+
+model LocationSuggestion {
+  id           String           @id @default(cuid())
+  address      String
+  cityId       String
+  latitude     Decimal?         @db.Decimal(10, 7)
+  longitude    Decimal?         @db.Decimal(10, 7)
+  landmark     String?
+  description  String?
+  photos       String[]
+  proposedRent Decimal?         @db.Decimal(12, 2)
+  ownerName    String?
+  ownerPhone   String?
+  status       SuggestionStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  city         City             @relation(fields: [cityId], references: [id])
+
+  @@map("location_suggestions")
+}
+
+model CompanySettings {
+  id            String   @id @default(cuid())
+  companyName   String   @default("Supreme Media Advertising")
+  tagline       String?  @default("Creative • Innovative • Positive")
+  gstNo         String?
+  panNo         String?
+  address       String?
+  bankName      String?
+  accountName   String?
+  accountNumber String?
+  ifscCode      String?
+  micrCode      String?
+  branchCode    String?
+  bankAddress   String?
+  terms         String[]
+  signatoryName String?  @default("Company Signator Name")
+  signatureUrl  String?
+  footerAddress String?
+  website       String?
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("company_settings")
 }
 
 enum Illumination {
@@ -107,35 +529,6 @@ enum HoldingStatus {
   BOOKED
   UNDER_MAINTENANCE
   INACTIVE
-}
-
-// ─── Ownership Contracts ────────────────────────────────────────────────────────
-
-model OwnershipContract {
-  id              String        @id @default(cuid())
-  contractNumber  String        @unique
-  ownerName       String
-  ownerType       OwnerType
-  ownerContact    String?
-  ownerEmail      String?
-  ownerAddress    String?
-  rentAmount      Decimal       @db.Decimal(12, 2)
-  rentCycle       RentCycle     @default(MONTHLY)
-  startDate       DateTime
-  endDate         DateTime
-  securityDeposit Decimal?      @db.Decimal(12, 2)
-  status          ContractStatus @default(ACTIVE)
-  notes           String?
-
-  holdingId String
-  holding   Holding @relation(fields: [holdingId], references: [id])
-
-  vendors   Vendor[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("ownership_contracts")
 }
 
 enum OwnerType {
@@ -159,69 +552,6 @@ enum ContractStatus {
   PENDING
 }
 
-// ─── Clients ────────────────────────────────────────────────────────────────────
-
-model Client {
-  id            String   @id @default(cuid())
-  name          String
-  contactPerson String
-  email         String?
-  phone         String
-  gstNumber     String?
-  panNumber     String?
-  address       String
-  isActive      Boolean  @default(true)
-
-  cityId   String?
-  city     City?   @relation(fields: [cityId], references: [id])
-  ledgerId String?
-  ledger   Ledger? @relation(fields: [ledgerId], references: [id])
-
-  bookings Booking[]
-  invoices Invoice[]
-  receipts Receipt[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("clients")
-}
-
-// ─── Bookings ───────────────────────────────────────────────────────────────────
-
-model Booking {
-  id                    String        @id @default(cuid())
-  bookingNumber         String        @unique
-  startDate             DateTime
-  endDate               DateTime
-  monthlyRate           Decimal       @db.Decimal(12, 2)
-  totalAmount           Decimal       @db.Decimal(12, 2)
-  billingCycle          BillingCycle  @default(MONTHLY)
-  status                BookingStatus @default(CONFIRMED)
-  freeMountings         Int           @default(0)
-  totalMountings        Int           @default(0)
-  notes                 String?
-
-  clientId  String
-  holdingId String
-
-  client  Client  @relation(fields: [clientId], references: [id])
-  holding Holding @relation(fields: [holdingId], references: [id])
-
-  advertisements Advertisement[]
-  invoices       Invoice[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clientId])
-  @@index([holdingId])
-  @@index([status])
-  @@index([startDate, endDate])
-  @@index([createdAt])
-  @@map("bookings")
-}
-
 enum BillingCycle {
   MONTHLY
   QUARTERLY
@@ -236,113 +566,12 @@ enum BookingStatus {
   CANCELLED
 }
 
-// ─── Advertisements ─────────────────────────────────────────────────────────────
-
-model Advertisement {
-  id                     String     @id @default(cuid())
-  campaignName           String
-  brandName              String
-  artworkDescription     String?
-  artworkUrl             String?
-  installationDate       DateTime?
-  removalDate            DateTime?
-  status                 AdStatus   @default(PENDING)
-  notes                  String?
-
-  bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id])
-
-  tasks Task[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("advertisements")
-}
-
 enum AdStatus {
   PENDING
   INSTALLED
   ACTIVE
   REMOVED
   COMPLETED
-}
-
-// ─── Task System ────────────────────────────────────────────────────────────────
-
-model Task {
-  id              String     @id @default(cuid())
-  title           String
-  description     String?
-  taskType        TaskType
-  priority        Priority   @default(MEDIUM)
-  status          TaskStatus @default(PENDING)
-  scheduledDate   DateTime
-  completedDate   DateTime?
-  assignedToId      String?
-  assignedTo        User?          @relation("AssignedToUser", fields: [assignedToId], references: [id])
-  estimatedCost   Decimal?   @db.Decimal(12, 2)
-  actualCost      Decimal?   @db.Decimal(12, 2)
-  notes           String?
-
-  holdingId       String?
-  advertisementId String?
-
-  holding       Holding?       @relation(fields: [holdingId], references: [id])
-  advertisement Advertisement? @relation(fields: [advertisementId], references: [id])
-
-  executions      TaskExecution[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([taskType])
-  @@index([status])
-  @@index([holdingId])
-  @@index([scheduledDate])
-  @@index([taskType, status])
-  @@map("tasks")
-}
-
-model TaskExecution {
-  id              String           @id @default(cuid())
-  taskId          String
-  task            Task             @relation(fields: [taskId], references: [id])
-  
-  performedById   String
-  performedBy     User             @relation(fields: [performedById], references: [id])
-  
-  status          TaskStatus?
-  condition       HoldingCondition
-  remarks         String?
-  
-  // Proof
-  latitude        Decimal          @db.Decimal(10, 7)
-  longitude       Decimal          @db.Decimal(10, 7)
-  
-  frontViewUrl    String
-  leftViewUrl     String
-  rightViewUrl    String
-  
-  createdAt       DateTime @default(now())
-  
-  @@map("task_executions")
-}
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  plainPassword String?
-  role          UserRole  @default(STAFF)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  taskExecutions TaskExecution[]
-  assignedTasks  Task[] @relation("AssignedToUser")
-
-  @@map("users")
 }
 
 enum UserRole {
@@ -367,45 +596,9 @@ enum Priority {
 enum TaskStatus {
   PENDING
   IN_PROGRESS
-  UNDER_REVIEW
   COMPLETED
   CANCELLED
-}
-
-// ─── Inspections ────────────────────────────────────────────────────────────────
-
-model Inspection {
-  id              String           @id @default(cuid())
-  inspectionDate  DateTime
-  inspectorName   String
-  condition       HoldingCondition
-  illuminationOk  Boolean          @default(true)
-  structureOk     Boolean          @default(true)
-  visibilityOk    Boolean          @default(true)
-  remarks         String?
-
-  holdingId String
-  holding   Holding @relation(fields: [holdingId], references: [id])
-
-  photos InspectionPhoto[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("inspections")
-}
-
-model InspectionPhoto {
-  id           String @id @default(cuid())
-  url          String
-  caption      String?
-  inspectionId String
-
-  inspection Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@map("inspection_photos")
+  UNDER_REVIEW
 }
 
 enum HoldingCondition {
@@ -414,31 +607,6 @@ enum HoldingCondition {
   FAIR
   POOR
   CRITICAL
-}
-
-// ─── Maintenance ────────────────────────────────────────────────────────────────
-
-model MaintenanceRecord {
-  id              String            @id @default(cuid())
-  maintenanceType MaintenanceType
-  description     String
-  cost            Decimal           @db.Decimal(12, 2)
-  performedDate   DateTime
-  performedBy     String
-  status          MaintenanceStatus @default(COMPLETED)
-  notes           String?
-
-  holdingId String
-  holding   Holding @relation(fields: [holdingId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([holdingId])
-  @@index([status])
-  @@index([performedDate])
-  @@index([maintenanceType])
-  @@map("maintenance_records")
 }
 
 enum MaintenanceType {
@@ -457,68 +625,6 @@ enum MaintenanceStatus {
   CANCELLED
 }
 
-// ─── Billing ────────────────────────────────────────────────────────────────────
-
-model Invoice {
-  id              String        @id @default(cuid())
-  invoiceNumber   String        @unique
-  invoiceDate     DateTime
-  dueDate         DateTime
-  subtotal        Decimal       @db.Decimal(12, 2)
-  cgstRate        Decimal       @db.Decimal(5, 2)
-  sgstRate        Decimal       @db.Decimal(5, 2)
-  igstRate        Decimal       @db.Decimal(5, 2) @default(0)
-  cgstAmount      Decimal       @db.Decimal(12, 2)
-  sgstAmount      Decimal       @db.Decimal(12, 2)
-  igstAmount      Decimal       @db.Decimal(12, 2) @default(0)
-  totalAmount     Decimal       @db.Decimal(12, 2)
-  paidAmount      Decimal       @db.Decimal(12, 2) @default(0)
-  status          InvoiceStatus @default(DRAFT)
-  notes           String?
-
-  clientId       String
-  bookingId      String
-  hsnCodeId      String
-  journalEntryId String?
-
-  client       Client        @relation(fields: [clientId], references: [id])
-  booking      Booking       @relation(fields: [bookingId], references: [id])
-  hsnCode      HsnCode       @relation(fields: [hsnCodeId], references: [id])
-  journalEntry JournalEntry? @relation(fields: [journalEntryId], references: [id])
-
-  receipts Receipt[]
-  items    InvoiceItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clientId])
-  @@index([bookingId])
-  @@index([status])
-  @@index([invoiceDate])
-  @@map("invoices")
-}
-
-model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  description String
-  hsnCodeId   String
-  hsnCode     HsnCode  @relation(fields: [hsnCodeId], references: [id])
-  quantity    Decimal  @db.Decimal(10, 2)
-  rate        Decimal  @db.Decimal(12, 2)
-  amount      Decimal  @db.Decimal(12, 2)
-  gstRate     Decimal  @db.Decimal(5, 2)
-  gstAmount   Decimal  @db.Decimal(12, 2)
-  total       Decimal  @db.Decimal(12, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("invoice_items")
-}
-
 enum InvoiceStatus {
   DRAFT
   SENT
@@ -526,33 +632,6 @@ enum InvoiceStatus {
   PARTIALLY_PAID
   OVERDUE
   CANCELLED
-}
-
-// ─── Receipts ───────────────────────────────────────────────────────────────────
-
-model Receipt {
-  id            String        @id @default(cuid())
-  receiptNumber String        @unique
-  receiptDate   DateTime
-  amount        Decimal       @db.Decimal(12, 2)
-  paymentMode   PaymentMode
-  referenceNo   String?
-  notes         String?
-
-  clientId         String
-  invoiceId        String
-  journalEntryId   String?
-  cashBankLedgerId String
-
-  client         Client        @relation(fields: [clientId], references: [id])
-  invoice        Invoice       @relation(fields: [invoiceId], references: [id])
-  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
-  cashBankLedger Ledger        @relation("ReceiptCashBankLedger", fields: [cashBankLedgerId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("receipts")
 }
 
 enum PaymentMode {
@@ -565,80 +644,12 @@ enum PaymentMode {
   OTHER
 }
 
-// ─── Accounting: Ledger (Chart of Accounts) ─────────────────────────────────────
-
-model Ledger {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  code        String     @unique
-  type        LedgerType
-  isGroup     Boolean    @default(false)
-  parentId    String?
-  parent      Ledger?    @relation("LedgerParent", fields: [parentId], references: [id])
-  children    Ledger[]   @relation("LedgerParent")
-
-  // Auto-posting flags
-  isCash       Boolean @default(false)
-  isBank       Boolean @default(false)
-  isReceivable Boolean @default(false)
-  isPayable    Boolean @default(false)
-  isRevenue    Boolean @default(false)
-  isTaxOutput  Boolean @default(false)
-  isTaxInput   Boolean @default(false)
-
-  journalLines         JournalLine[]
-  clients              Client[]
-  vendors              Vendor[]       @relation("VendorLedger")
-  receiptCashBank      Receipt[]      @relation("ReceiptCashBankLedger")
-  paymentCashBank      Payment[]      @relation("PaymentCashBankLedger")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("ledgers")
-}
-
 enum LedgerType {
   ASSET
   LIABILITY
   INCOME
   EXPENSE
   EQUITY
-}
-
-// ─── Accounting: Journal Entries ─────────────────────────────────────────────────
-
-model JournalEntry {
-  id          String        @id @default(cuid())
-  entryNumber String        @unique
-  entryDate   DateTime
-  description String?
-  source      JournalSource
-  sourceId    String?
-  status      JournalStatus @default(DRAFT)
-
-  lines    JournalLine[]
-  invoices Invoice[]
-  receipts Receipt[]
-  payments Payment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("journal_entries")
-}
-
-model JournalLine {
-  id          String       @id @default(cuid())
-  journalId   String
-  journal     JournalEntry @relation(fields: [journalId], references: [id], onDelete: Cascade)
-  ledgerId    String
-  ledger      Ledger       @relation(fields: [ledgerId], references: [id])
-  debit       Decimal?     @db.Decimal(12, 2)
-  credit      Decimal?     @db.Decimal(12, 2)
-  description String?
-
-  @@map("journal_lines")
 }
 
 enum JournalSource {
@@ -652,89 +663,6 @@ enum JournalStatus {
   DRAFT
   POSTED
   VOID
-}
-
-// ─── Accounting: Vendors ─────────────────────────────────────────────────────────
-
-model Vendor {
-  id            String   @id @default(cuid())
-  name          String
-  contactPerson String?
-  email         String?
-  phone         String
-  gstNumber     String?
-  panNumber     String?
-  address       String
-  isActive      Boolean  @default(true)
-
-  ownershipContractId String?
-  ownershipContract   OwnershipContract? @relation(fields: [ownershipContractId], references: [id])
-
-  cityId   String?
-  city     City?   @relation(fields: [cityId], references: [id])
-  ledgerId String
-  ledger   Ledger  @relation("VendorLedger", fields: [ledgerId], references: [id])
-
-  payments Payment[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("vendors")
-}
-
-// ─── Accounting: Vendor Payments ─────────────────────────────────────────────────
-
-model Payment {
-  id             String      @id @default(cuid())
-  paymentNumber  String      @unique
-  paymentDate    DateTime
-  amount         Decimal     @db.Decimal(12, 2)
-  paymentMode    PaymentMode
-  referenceNo    String?
-  notes          String?
-
-  vendorId         String
-  vendor           Vendor       @relation(fields: [vendorId], references: [id])
-  cashBankLedgerId String
-  cashBankLedger   Ledger       @relation("PaymentCashBankLedger", fields: [cashBankLedgerId], references: [id])
-  journalEntryId   String?
-  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("payments")
-}
-
-// ─── Location Suggestions ──────────────────────────────────────────────────────
-
-model LocationSuggestion {
-  id              String           @id @default(cuid())
-  
-  // Location
-  address         String
-  cityId          String
-  city            City             @relation(fields: [cityId], references: [id])
-  latitude        Decimal?         @db.Decimal(10, 7)
-  longitude       Decimal?         @db.Decimal(10, 7)
-  landmark        String?
-  
-  // Proposal Details
-  description     String?
-  photos          String[]
-  proposedRent    Decimal?         @db.Decimal(12, 2)
-  
-  // Contact (Owner of the place)
-  ownerName       String?
-  ownerPhone      String?
-  
-  status          SuggestionStatus @default(PENDING)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@map("location_suggestions")
 }
 
 enum SuggestionStatus {
