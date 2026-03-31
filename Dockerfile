@@ -24,6 +24,8 @@ COPY . .
 
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
+
 # Build Next.js (standalone)
 RUN npm run build && \
     test -d .next/standalone && \
@@ -54,6 +56,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 #  FIXED: Copy node_modules (CRITICAL - was missing!)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+RUN ./node_modules/.bin/tsx --version || npm install -g tsx
 
 #  ADD THIS: Copy prisma directory for migrations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
