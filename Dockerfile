@@ -22,7 +22,7 @@ COPY --from=deps /app/node_modules ./node_modules
 
 COPY . .
 
-RUN npx prisma generate
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build Next.js (standalone)
 RUN npm run build && \
