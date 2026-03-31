@@ -64,7 +64,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copy static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-COPY --from=builder --chown=nextjs:nodejs /app/entrypoint.sh /app/entrypoint.sh
+COPY --chown=nextjs:nodejs entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 
