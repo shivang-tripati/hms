@@ -76,4 +76,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
 
 # Fail-fast + start app
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "server.js"]
+CMD ["/app/entrypoint.sh"]
