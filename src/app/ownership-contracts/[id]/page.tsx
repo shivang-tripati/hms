@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatCurrency, formatEnum } from "@/lib/utils";
-import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays } from "lucide-react";
+import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays, Paperclip, Download } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -160,6 +160,43 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                         </CardHeader>
                         <CardContent>
                             <p className="text-sm text-muted-foreground">{contract.notes}</p>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Documents */}
+                {(contract.agreementUrl || contract.ownerKycUrl) && (
+                    <Card className="col-span-full">
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Paperclip className="h-4 w-4" /> Documents
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-4">
+                            {contract.agreementUrl && (
+                                <a
+                                    href={contract.agreementUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                                >
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    Agreement Document
+                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                                </a>
+                            )}
+                            {contract.ownerKycUrl && (
+                                <a
+                                    href={contract.ownerKycUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                                >
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    Owner KYC Document
+                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                                </a>
+                            )}
                         </CardContent>
                     </Card>
                 )}

@@ -72,6 +72,8 @@ export const ownershipContractSchema = z.object({
     securityDeposit: z.coerce.number().optional(),
     status: z.enum(["ACTIVE", "EXPIRED", "TERMINATED", "PENDING"]).default("ACTIVE"),
     notes: z.string().optional(),
+    agreementUrl: z.string().optional(),
+    ownerKycUrl: z.string().optional(),
     holdingId: z.string().min(1, "Holding is required"),
 });
 
