@@ -100,6 +100,8 @@ model OwnershipContract {
   securityDeposit Decimal?       @db.Decimal(12, 2)
   status          ContractStatus @default(ACTIVE)
   notes           String?
+  agreementUrl    String?
+  ownerKycUrl     String?
   holdingId       String
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt

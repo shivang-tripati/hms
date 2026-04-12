@@ -34,6 +34,8 @@ RUN npm run build && \
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+
+
 # Install minimal runtime deps
 RUN apk add --no-cache dumb-init libc6-compat openssl
 
@@ -47,21 +49,27 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# ✅ FIXED: Copy standalone built app
+#  FIXED: Copy standalone built app
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# ✅ FIXED: Copy node_modules (CRITICAL - was missing!)
+#  FIXED: Copy node_modules (CRITICAL - was missing!)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
-# ✅ ADD THIS: Copy prisma directory for migrations
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
+RUN ./node_modules/.bin/tsx --version || npm install -g tsx
+
+#  ADD THIS: Copy prisma directory for migrations
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # Copy public assets
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+COPY --chown=nextjs:nodejs entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 
 # Switch to non-root user
@@ -75,5 +83,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode < 500 ? 0 : 1))" || exit 1
 
 # Fail-fast + start app
-ENTRYPOINT ["dumb-init", "--"]
-CMD ["/app/entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "--", "/app/entrypoint.sh"]

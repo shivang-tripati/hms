@@ -1,10 +1,10 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, FileText, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -40,6 +40,115 @@ interface ContractFormProps {
     holdings: any[];
 }
 
+// ─── PDF Upload Widget ─────────────────────────────────────────────────────────
+
+interface PdfUploadFieldProps {
+    label: string;
+    value?: string;
+    onChange: (url: string | undefined) => void;
+    hint?: string;
+}
+
+function PdfUploadField({ label, value, onChange, hint }: PdfUploadFieldProps) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleFile = async (file: File) => {
+        if (!file) return;
+        if (file.type !== "application/pdf") {
+            toast.error("Only PDF files are allowed");
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("File must be smaller than 10 MB");
+            return;
+        }
+        setUploading(true);
+        try {
+            const fd = new FormData();
+            fd.append("file", file);
+            const res = await fetch("/api/upload", { method: "POST", body: fd });
+            if (!res.ok) throw new Error("Upload failed");
+            const { url } = await res.json();
+            onChange(url);
+            toast.success(`${label} uploaded`);
+        } catch {
+            toast.error(`Failed to upload ${label}`);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const baseName = value ? decodeURIComponent(value.split("/").pop() ?? value) : null;
+
+    return (
+        <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium leading-none">{label}</span>
+            {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+
+            {value ? (
+                <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
+                    <FileText className="h-4 w-4 shrink-0 text-indigo-500" />
+                    <a
+                        href={value}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 truncate text-sm text-indigo-500 hover:underline"
+                        title={baseName ?? undefined}
+                    >
+                        {baseName ?? "View PDF"}
+                    </a>
+                    <button
+                        type="button"
+                        onClick={() => onChange(undefined)}
+                        className="ml-auto rounded-full p-0.5 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remove file"
+                    >
+                        <X className="h-3.5 w-3.5" />
+                    </button>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => inputRef.current?.click()}
+                    className={cn(
+                        "flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/60 px-4 py-5 text-sm text-muted-foreground transition-colors",
+                        "hover:border-indigo-400 hover:text-indigo-500 hover:bg-indigo-50/5",
+                        uploading && "cursor-not-allowed opacity-60"
+                    )}
+                >
+                    {uploading ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Uploading…
+                        </>
+                    ) : (
+                        <>
+                            <Upload className="h-4 w-4" />
+                            Click to upload PDF (max 10 MB)
+                        </>
+                    )}
+                </button>
+            )}
+
+            <input
+                ref={inputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(f);
+                    e.target.value = "";
+                }}
+            />
+        </div>
+    );
+}
+
+// ─── Contract Form ─────────────────────────────────────────────────────────────
+
 export function ContractForm({ initialData, holdings }: ContractFormProps) {
     const router = useRouter();
 
@@ -58,6 +167,8 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
             securityDeposit: initialData.securityDeposit ? Number(initialData.securityDeposit) : undefined,
             status: initialData.status,
             notes: initialData.notes || undefined,
+            agreementUrl: initialData.agreementUrl || undefined,
+            ownerKycUrl: initialData.ownerKycUrl || undefined,
             holdingId: initialData.holdingId,
         }
         : {
@@ -151,6 +262,7 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
                         )}
                     />
 
+                    {/* ── Owner Details ─────────────────────────────────────── */}
                     <div className="col-span-2 border-t pt-4">
                         <p className="font-semibold text-sm mb-4">Owner Details</p>
                         <div className="grid md:grid-cols-2 gap-4">
@@ -233,9 +345,47 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
                                     </FormItem>
                                 )}
                             />
+
+                            {/* ── Document Uploads ────────────────────────────── */}
+                            <FormField
+                                control={form.control}
+                                name="agreementUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <PdfUploadField
+                                                label="Agreement Document"
+                                                hint="Upload the signed ownership/rental agreement (PDF)"
+                                                value={field.value ?? undefined}
+                                                onChange={(url) => field.onChange(url ?? null)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="ownerKycUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <PdfUploadField
+                                                label="Owner KYC Document"
+                                                hint="Upload the owner's KYC (Aadhaar / PAN / Passport) as PDF"
+                                                value={field.value ?? undefined}
+                                                onChange={(url) => field.onChange(url ?? null)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </div>
                     </div>
 
+                    {/* ── Financial & Terms ─────────────────────────────────── */}
                     <div className="col-span-2 border-t pt-4">
                         <p className="font-semibold text-sm mb-4">Financial & Terms</p>
                         <div className="grid md:grid-cols-2 gap-4">
