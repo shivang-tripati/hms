@@ -99,7 +99,7 @@ export function Header() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="rounded-lg text-red-600 focus:bg-red-50 focus:text-red-700 dark:focus:bg-red-900/10 cursor-pointer"
-                            onClick={() => logout()}
+                            onClick={async () => { await logout(); window.location.href = "/login"; }}
                         >
                             <LogOut className="mr-2 h-4 w-4" />
                             Log out

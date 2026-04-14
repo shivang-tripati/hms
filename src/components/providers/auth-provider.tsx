@@ -1,17 +1,23 @@
 "use client";
 
+import { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+    children,
+    session,
+}: {
+    children: React.ReactNode;
+    session: Session | null;
+}) {
     return (
         <SessionProvider
+            // Pass the server-fetched session so the client starts
+            // with the correct user data immediately (no flash of stale data).
+            session={session}
             // Refetch the session every time the window regains focus.
-            // This ensures that after logout → login as a different user,
-            // the client-side session (useSession) reflects the new user
-            // immediately instead of showing stale data.
             refetchOnWindowFocus={true}
-            // Refetch the session every 0 seconds (i.e. on every page navigation).
-            // This is the most aggressive setting to prevent stale sessions.
+            // Refetch session on every navigation cycle.
             refetchInterval={0}
         >
             {children}

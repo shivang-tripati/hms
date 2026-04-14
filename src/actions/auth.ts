@@ -9,16 +9,20 @@ export async function authenticate(
     formData: FormData,
 ) {
     try {
-        // Revalidate all cached pages BEFORE sign-in so that
-        // the Next.js Router Cache doesn't serve stale pages
-        // from the previous user's session after redirect.
+        // Bust ALL server-side caches so stale pages from
+        // the previous user's session are never served.
         revalidatePath("/", "layout");
 
-
+        // Sign in WITHOUT redirectTo — we'll handle the redirect
+        // on the client side with window.location.href to force
+        // a full hard page load (bypasses client Router Cache).
         await signIn("credentials", {
             ...Object.fromEntries(formData.entries()),
-            redirectTo: "/"
+            redirect: false,
         });
+
+        // If we reach here, credentials were valid.
+        return "__success__";
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {
@@ -33,9 +37,12 @@ export async function authenticate(
 }
 
 export async function logout() {
-    // Revalidate all cached pages so the next user who logs in
-    // doesn't see stale content from this session.
+    // Bust server-side caches.
     revalidatePath("/", "layout");
-    await signOut({ redirectTo: "/login" });
 
+    // Sign out without server-side redirect — the client
+    // will do a hard redirect to /login.
+    await signOut({ redirect: false });
+
+    return "__logout__";
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { authenticate } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,15 @@ export default function LoginPage() {
         authenticate,
         undefined
     );
+
+    // When login succeeds, do a HARD redirect (full page load).
+    // This is critical to avoid showing a cached dashboard from
+    // a previous user's session (Next.js client Router Cache issue).
+    useEffect(() => {
+        if (errorMessage === "__success__") {
+            window.location.href = "/";
+        }
+    }, [errorMessage]);
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50/50 via-background to-purple-50/50 p-4 dark:from-indigo-950/50 dark:to-purple-950/50">
@@ -40,7 +49,7 @@ export default function LoginPage() {
                 </CardHeader>
                 <form action={dispatch}>
                     <CardContent className="space-y-6">
-                        {errorMessage && (
+                        {errorMessage && errorMessage !== "__success__" && (
                             <Alert variant="destructive" className="bg-red-50 text-red-900 border-red-200">
                                 <AlertCircle className="h-4 w-4" />
                                 <AlertDescription>{errorMessage}</AlertDescription>

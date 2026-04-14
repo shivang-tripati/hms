@@ -180,7 +180,7 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
                 <Button
                     variant="ghost"
                     className="w-full justify-start gap-3 rounded-xl hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/10 transition-colors"
-                    onClick={() => logout()}
+                    onClick={async () => { await logout(); window.location.href = "/login"; }}
                 >
                     <LogOut className="h-4 w-4" />
                     <span className="text-sm font-medium">Log out</span>
