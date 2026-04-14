@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { LayoutWrapper } from "@/components/layout/layout-wrapper";
+import { auth } from "@/auth";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,11 +18,13 @@ export const metadata: Metadata = {
   description: "Manage billboard holdings, advertisements, clients, bookings, and billing operations efficiently.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const session = await auth();
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
@@ -31,9 +34,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
+          <AuthProvider >
             <TooltipProvider>
-              <LayoutWrapper>{children}</LayoutWrapper>
+              <LayoutWrapper key={session?.user?.id} >{children}</LayoutWrapper>
               <Toaster richColors position="top-right" />
             </TooltipProvider>
           </AuthProvider>

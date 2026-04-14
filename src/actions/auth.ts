@@ -10,6 +10,12 @@ export async function authenticate(
     formData: FormData,
 ) {
     try {
+        // 1. CLEAR THE CACHE FIRST
+        // This ensures the NEXT request (to the dashboard) 
+        // will fetch fresh Server Components/Sidebar.
+        revalidatePath("/", "layout");
+
+        // 2. Sign in
         await signIn("credentials", {
             ...Object.fromEntries(formData.entries()),
             redirectTo: "/"
@@ -30,5 +36,6 @@ export async function authenticate(
 }
 
 export async function logout() {
-    await signOut({ redirectTo: "/login" });
+    revalidatePath("/", "layout");
+    await signOut({ redirectTo: "/login", redirect: true });
 }
