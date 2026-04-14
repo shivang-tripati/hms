@@ -16,7 +16,9 @@ import {
     CheckCircle,
     Megaphone,
     Clock,
-    Play
+    Play,
+    FileText,
+    Users,
 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
@@ -36,7 +38,6 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
     let task: any;
     try {
         task = await apiFetch<any>(`/api/tasks/${id}`);
-        console.log(task);
     } catch (error) {
         notFound();
     }
@@ -45,6 +46,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
         notFound();
     }
     const canComplete = role === "STAFF" && (task.status === "PENDING" || task.status === "IN_PROGRESS");
+    const isBookingLinked = task.taskType === "INSTALLATION" || task.taskType === "MOUNTING";
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -178,7 +180,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                         <div className="space-y-2">
                                             <p className="text-xs font-semibold text-muted-foreground uppercase">Remarks</p>
                                             <p className="text-sm bg-slate-50 p-3 rounded-md border border-slate-100 italic">
-                                                "{exec.remarks || "No remarks provided."}"
+                                                &quot;{exec.remarks || "No remarks provided."}&quot;
                                             </p>
                                         </div>
 
@@ -222,6 +224,34 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                             <CardTitle className="text-base">Related Context</CardTitle>
                         </CardHeader>
                         <CardContent className="grid md:grid-cols-2 gap-6">
+                            {/* Booking info (for INSTALLATION/MOUNTING) */}
+                            {isBookingLinked && task.booking && (
+                                <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+                                    <div className="bg-emerald-500/10 p-2 rounded-md">
+                                        <FileText className="h-5 w-5 text-emerald-600" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Booking</p>
+                                        <p className="font-bold">{task.booking.bookingNumber}</p>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                            <Users className="h-3 w-3" />
+                                            {task.booking.client?.name || "N/A"}
+                                        </div>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                            <MapPin className="h-3 w-3" />
+                                            {task.booking.holding?.code || "N/A"} — {task.booking.holding?.name || ""}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <StatusBadge status={task.booking.status} />
+                                        </div>
+                                        <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
+                                            <Link href={`/bookings/${task.booking.id}`}>View Booking</Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Holding info (for MAINTENANCE/INSPECTION or when available) */}
                             {task.holding && (
                                 <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
                                     <div className="bg-primary/10 p-2 rounded-md">
@@ -237,6 +267,8 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                     </div>
                                 </div>
                             )}
+
+                            {/* Advertisement info */}
                             {task.advertisement && (
                                 <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
                                     <div className="bg-indigo-500/10 p-2 rounded-md">

@@ -16,13 +16,15 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
 
     let task: any;
     let holdings: any[];
+    let bookings: any[];
     let advertisements: any[];
     let staff: any[];
 
     try {
-        [task, holdings, advertisements, staff] = await Promise.all([
+        [task, holdings, bookings, advertisements, staff] = await Promise.all([
             apiFetch<any>(`/api/tasks/${id}`),
             apiFetch<any[]>("/api/holdings"),
+            apiFetch<any[]>("/api/bookings"),
             apiFetch<any[]>("/api/advertisements"),
             apiFetch<any[]>("/api/users?role=STAFF"),
         ]);
@@ -33,6 +35,11 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
     if (!task) {
         notFound();
     }
+
+    // Include CONFIRMED/ACTIVE bookings + the task's current booking if any
+    const activeBookings = bookings.filter(
+        (b: any) => b.status === "CONFIRMED" || b.status === "ACTIVE" || b.id === task.bookingId
+    );
 
     return (
         <div className="space-y-6 max-w-2xl mx-auto">
@@ -45,6 +52,7 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
                 <TaskForm
                     initialData={task}
                     holdings={holdings}
+                    bookings={activeBookings}
                     advertisements={advertisements}
                     staff={staff}
                 />

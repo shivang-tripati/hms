@@ -37,6 +37,8 @@ export default async function CompleteTaskPage({ params }: CompleteTaskPageProps
         redirect("/tasks");
     }
 
+    const isBookingLinked = task.taskType === "INSTALLATION" || task.taskType === "MOUNTING";
+
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
@@ -52,10 +54,27 @@ export default async function CompleteTaskPage({ params }: CompleteTaskPageProps
                         <p className="font-medium text-foreground">Type</p>
                         <p className="uppercase tracking-wider text-[10px]">{task.taskType}</p>
                     </div>
-                    <div>
-                        <p className="font-medium text-foreground">Holding</p>
-                        <p>{task.holding?.code}</p>
-                    </div>
+                    {isBookingLinked && task.booking ? (
+                        <>
+                            <div>
+                                <p className="font-medium text-foreground">Booking</p>
+                                <p>{task.booking.bookingNumber}</p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-foreground">Client</p>
+                                <p>{task.booking.client?.name || "N/A"}</p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-foreground">Holding</p>
+                                <p>{task.booking.holding?.code || task.holding?.code || "N/A"}</p>
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            <p className="font-medium text-foreground">Holding</p>
+                            <p>{task.holding?.code}</p>
+                        </div>
+                    )}
                     <div>
                         <p className="font-medium text-foreground">Priority</p>
                         <p className="uppercase tracking-wider text-[10px]">{task.priority}</p>
@@ -64,6 +83,12 @@ export default async function CompleteTaskPage({ params }: CompleteTaskPageProps
                         <p className="font-medium text-foreground">Assigned Date</p>
                         <p>{formatDate(task.scheduledDate)}</p>
                     </div>
+                    {task.advertisement && (
+                        <div>
+                            <p className="font-medium text-foreground">Advertisement</p>
+                            <p>{task.advertisement.campaignName}</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

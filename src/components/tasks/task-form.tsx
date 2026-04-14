@@ -34,8 +34,15 @@ import { taskSchema, type TaskFormData } from "@/lib/validations";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { Holding, Advertisement, User } from "@prisma/client";
+import { Holding, Advertisement, User, Booking } from "@prisma/client";
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+
+type BookingWithRelations = Booking & {
+    client?: { id: string; name: string };
+    holding?: { id: string; code: string; name: string };
+    advertisements?: Advertisement[];
+};
 
 interface TaskFormProps {
     initialData?: {
@@ -52,21 +59,21 @@ interface TaskFormProps {
             id: string;
             name: string;
         } | null;
-        estimatedCost: any; // Decimal
-        actualCost: any; // Decimal
+        estimatedCost: any;
+        actualCost: any;
         notes: string | null;
         holdingId: string | null;
+        bookingId: string | null;
         advertisementId: string | null;
     };
     holdings: Holding[];
+    bookings: BookingWithRelations[];
     advertisements: Advertisement[];
     staff: User[];
 }
 
-export function TaskForm({ initialData, holdings, advertisements, staff }: TaskFormProps) {
+export function TaskForm({ initialData, holdings, bookings, advertisements, staff }: TaskFormProps) {
     const router = useRouter();
-
-    console.log(initialData);
 
     const defaultValues: Partial<TaskFormData> = initialData
         ? {
@@ -81,6 +88,7 @@ export function TaskForm({ initialData, holdings, advertisements, staff }: TaskF
             estimatedCost: initialData.estimatedCost ? Number(initialData.estimatedCost) : undefined,
             actualCost: initialData.actualCost ? Number(initialData.actualCost) : undefined,
             notes: initialData.notes || undefined,
+            bookingId: initialData.bookingId || undefined,
             holdingId: initialData.holdingId || undefined,
             advertisementId: initialData.advertisementId || undefined,
         }
@@ -101,10 +109,36 @@ export function TaskForm({ initialData, holdings, advertisements, staff }: TaskF
     });
 
     const watchedTaskType = form.watch("taskType");
-    const isHoldingRequired = watchedTaskType !== "INSPECTION";
+    const watchedBookingId = form.watch("bookingId");
+
+    // Determine which linking fields to show
+    const isBookingLinked = watchedTaskType === "INSTALLATION" || watchedTaskType === "MOUNTING";
+    const isHoldingLinked = watchedTaskType === "MAINTENANCE" || watchedTaskType === "INSPECTION";
+
+    // Filter advertisements by selected booking
+    const filteredAdvertisements = useMemo(() => {
+        if (!isBookingLinked || !watchedBookingId) return [];
+        const selectedBooking = bookings.find(b => b.id === watchedBookingId);
+        return selectedBooking?.advertisements || [];
+    }, [isBookingLinked, watchedBookingId, bookings]);
+
+    // Get holding info from selected booking (for display)
+    const selectedBookingHolding = useMemo(() => {
+        if (!watchedBookingId) return null;
+        const booking = bookings.find(b => b.id === watchedBookingId);
+        return booking?.holding || null;
+    }, [watchedBookingId, bookings]);
 
     const onSubmit = async (data: TaskFormData) => {
         try {
+            // Clear irrelevant fields based on task type
+            if (isBookingLinked) {
+                data.holdingId = undefined; // Will be auto-derived from booking on server
+            } else {
+                data.bookingId = undefined;
+                data.advertisementId = undefined;
+            }
+
             if (initialData) {
                 await apiFetch(`/api/tasks/${initialData.id}`, {
                     method: 'PUT',
@@ -153,9 +187,14 @@ export function TaskForm({ initialData, holdings, advertisements, staff }: TaskF
                                 <Select
                                     onValueChange={(val) => {
                                         field.onChange(val);
-                                        // Clear holdingId error when switching to INSPECTION
-                                        if (val === "INSPECTION") {
+                                        // Clear linking fields when switching type
+                                        if (val === "INSTALLATION" || val === "MOUNTING") {
+                                            form.setValue("holdingId", undefined);
                                             form.clearErrors("holdingId");
+                                        } else {
+                                            form.setValue("bookingId", undefined);
+                                            form.setValue("advertisementId", undefined);
+                                            form.clearErrors("bookingId");
                                         }
                                     }}
                                     defaultValue={field.value}
@@ -272,43 +311,132 @@ export function TaskForm({ initialData, holdings, advertisements, staff }: TaskF
                         )}
                     />
 
-                    <FormField
-                        control={form.control}
-                        name="holdingId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>
-                                    Holding{" "}
-                                    {isHoldingRequired ? (
-                                        <span className="text-destructive">*</span>
-                                    ) : (
-                                        <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
+                    {/* ── BOOKING DROPDOWN (for INSTALLATION / MOUNTING) ── */}
+                    {isBookingLinked && (
+                        <FormField
+                            control={form.control}
+                            name="bookingId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Booking <span className="text-destructive">*</span>
+                                    </FormLabel>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            field.onChange(val === "none" ? undefined : val);
+                                            // Clear advertisement when booking changes
+                                            form.setValue("advertisementId", undefined);
+                                        }}
+                                        defaultValue={field.value || "none"}
+                                        value={field.value || "none"}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select booking" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="none">Select a booking</SelectItem>
+                                            {bookings.map((booking) => (
+                                                <SelectItem key={booking.id} value={booking.id}>
+                                                    {booking.bookingNumber} — {booking.client?.name || "N/A"} ({booking.holding?.code || "N/A"})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedBookingHolding && (
+                                        <FormDescription>
+                                            Holding: <strong>{selectedBookingHolding.code}</strong> — {selectedBookingHolding.name}
+                                        </FormDescription>
                                     )}
-                                </FormLabel>
-                                <Select
-                                    onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
-                                    defaultValue={field.value || "none"}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select holding" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {!isHoldingRequired && (
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
+                    {/* ── ADVERTISEMENT DROPDOWN (for INSTALLATION / MOUNTING, filtered by booking) ── */}
+                    {isBookingLinked && watchedBookingId && (
+                        <FormField
+                            control={form.control}
+                            name="advertisementId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Advertisement{" "}
+                                        <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
+                                    </FormLabel>
+                                    <Select
+                                        onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
+                                        defaultValue={field.value || "none"}
+                                        value={field.value || "none"}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select advertisement" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
                                             <SelectItem value="none">None</SelectItem>
+                                            {filteredAdvertisements.map((ad) => (
+                                                <SelectItem key={ad.id} value={ad.id}>
+                                                    {ad.campaignName} — {ad.brandName}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {filteredAdvertisements.length === 0 && (
+                                        <FormDescription className="text-amber-600">
+                                            No advertisements found for this booking.
+                                        </FormDescription>
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
+                    {/* ── HOLDING DROPDOWN (for MAINTENANCE / INSPECTION) ── */}
+                    {isHoldingLinked && (
+                        <FormField
+                            control={form.control}
+                            name="holdingId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Holding{" "}
+                                        {watchedTaskType === "MAINTENANCE" ? (
+                                            <span className="text-destructive">*</span>
+                                        ) : (
+                                            <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
                                         )}
-                                        {holdings.map((holding) => (
-                                            <SelectItem key={holding.id} value={holding.id}>
-                                                {holding.code} - {holding.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                                    </FormLabel>
+                                    <Select
+                                        onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
+                                        defaultValue={field.value || "none"}
+                                        value={field.value || "none"}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select holding" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {watchedTaskType !== "MAINTENANCE" && (
+                                                <SelectItem value="none">None</SelectItem>
+                                            )}
+                                            {holdings.map((holding) => (
+                                                <SelectItem key={holding.id} value={holding.id}>
+                                                    {holding.code} - {holding.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <FormField
                         control={form.control}

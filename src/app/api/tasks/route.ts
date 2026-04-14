@@ -16,6 +16,12 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
             include: {
                 holding: true,
+                booking: {
+                    include: {
+                        client: { select: { id: true, name: true } },
+                        holding: { select: { id: true, code: true, name: true } },
+                    },
+                },
                 advertisement: true,
                 assignedTo: { select: { name: true } },
             },
@@ -35,13 +41,26 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = taskSchema.parse(body);
 
-        const { assignedTo, holdingId, advertisementId, completedDate, ...otherData } = parsed;
+        const { assignedTo, holdingId, bookingId, advertisementId, completedDate, ...otherData } = parsed;
+
+        // For INSTALLATION/MOUNTING, auto-derive holdingId from the booking
+        let derivedHoldingId = holdingId || null;
+        if ((parsed.taskType === "INSTALLATION" || parsed.taskType === "MOUNTING") && bookingId) {
+            const booking = await prisma.booking.findUnique({
+                where: { id: bookingId },
+                select: { holdingId: true },
+            });
+            if (booking) {
+                derivedHoldingId = booking.holdingId;
+            }
+        }
 
         const task = await prisma.task.create({
             data: {
                 ...otherData,
                 assignedToId: assignedTo || null,
-                holdingId: holdingId || null,
+                holdingId: derivedHoldingId,
+                bookingId: bookingId || null,
                 advertisementId: advertisementId || null,
                 completedDate: completedDate || null,
             },

@@ -143,16 +143,29 @@ export const taskSchema = z.object({
     estimatedCost: z.coerce.number().optional(),
     actualCost: z.coerce.number().optional(),
     notes: z.string().optional(),
+    bookingId: z.string().optional(),
     holdingId: z.string().optional(),
     advertisementId: z.string().optional(),
 }).superRefine((data, ctx) => {
-    if (data.taskType !== "INSPECTION" && (!data.holdingId || data.holdingId.trim() === "")) {
+    // INSTALLATION & MOUNTING require a booking
+    if ((data.taskType === "INSTALLATION" || data.taskType === "MOUNTING") &&
+        (!data.bookingId || data.bookingId.trim() === "")) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Holding is required for this task type",
+            message: "Booking is required for Installation/Mounting tasks",
+            path: ["bookingId"],
+        });
+    }
+    // MAINTENANCE requires a holding
+    if (data.taskType === "MAINTENANCE" &&
+        (!data.holdingId || data.holdingId.trim() === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Holding is required for Maintenance tasks",
             path: ["holdingId"],
         });
     }
+    // INSPECTION: holdingId is optional
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;

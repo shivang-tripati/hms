@@ -24,7 +24,11 @@ export async function GET() {
     try {
         const bookings = await prisma.booking.findMany({
             orderBy: { createdAt: "desc" },
-            include: { client: true, holding: true },
+            include: {
+                client: true,
+                holding: true,
+                advertisements: { select: { id: true, campaignName: true, brandName: true, status: true } },
+            },
         });
         return NextResponse.json(bookings);
     } catch (error) {

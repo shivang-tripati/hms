@@ -16,13 +16,22 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const parsed = taskExecutionSchema.parse(body);
 
-        const execution = await prisma.$transaction(async (tx) => {
-            // 1. Fetch the task to get its type and advertisement link
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Fetch the task with all related data
             const task = await tx.task.findUnique({
                 where: { id: parsed.taskId },
                 include: {
+                    booking: {
+                        select: {
+                            id: true,
+                            status: true,
+                            holdingId: true,
+                            freeMountings: true,
+                            totalMountings: true,
+                        },
+                    },
                     advertisement: {
-                        select: { bookingId: true },
+                        select: { id: true, status: true },
                     },
                 },
             });
@@ -30,7 +39,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             if (!task) throw new Error("Task not found");
 
             // 2. Create task execution record
-            const exec = await tx.taskExecution.create({
+            const execution = await tx.taskExecution.create({
                 data: {
                     taskId: parsed.taskId,
                     performedById: session.user.id!,
@@ -54,25 +63,78 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 },
             });
 
-            let updatedBooking = null;
+            // ──────────────────────────────────────────────────────
+            // 4. Chain status updates on COMPLETION
+            // ──────────────────────────────────────────────────────
+            if (parsed.status === "COMPLETED") {
 
-            // 4. If this is MOUNTING task being COMPLETED, increment counts
-            if (
-                parsed.status === "COMPLETED" &&
-                task.advertisement?.bookingId
-            ) {
-                if (task.taskType === "MOUNTING") {
-                    updatedBooking = await (tx as any).booking.update({
-                        where: { id: task.advertisement.bookingId },
+                // ── INSTALLATION completion ──
+                if (task.taskType === "INSTALLATION" && task.booking) {
+                    // Increment totalMountings (first install = first mounting)
+                    await tx.booking.update({
+                        where: { id: task.booking.id },
+                        data: { totalMountings: { increment: 1 } },
+                    });
+
+                    // Activate booking if it's still CONFIRMED
+                    if (task.booking.status === "CONFIRMED") {
+                        await tx.booking.update({
+                            where: { id: task.booking.id },
+                            data: { status: "ACTIVE" },
+                        });
+                    }
+
+                    // Activate the linked advertisement
+                    if (task.advertisement && (task.advertisement.status === "PENDING" || task.advertisement.status === "INSTALLED")) {
+                        await tx.advertisement.update({
+                            where: { id: task.advertisement.id },
+                            data: {
+                                status: "ACTIVE",
+                                installationDate: new Date(),
+                            },
+                        });
+                    }
+
+                    // Mark the holding as BOOKED (it's now actively in use)
+                    if (task.booking.holdingId) {
+                        await tx.holding.update({
+                            where: { id: task.booking.holdingId },
+                            data: { status: "BOOKED" },
+                        });
+                    }
+                }
+
+                // ── MOUNTING completion ──
+                if (task.taskType === "MOUNTING" && task.booking) {
+                    // Increment totalMountings
+                    await tx.booking.update({
+                        where: { id: task.booking.id },
                         data: { totalMountings: { increment: 1 } },
                     });
                 }
+
+                // ── MAINTENANCE / INSPECTION completion ──
+                if (task.taskType === "MAINTENANCE" || task.taskType === "INSPECTION") {
+                    // If the holding is UNDER_MAINTENANCE or INACTIVE, mark it ACTIVE
+                    if (task.holdingId) {
+                        const holding = await tx.holding.findUnique({
+                            where: { id: task.holdingId },
+                            select: { status: true },
+                        });
+                        if (holding && (holding.status === "UNDER_MAINTENANCE" || holding.status === "INACTIVE")) {
+                            await tx.holding.update({
+                                where: { id: task.holdingId },
+                                data: { status: "AVAILABLE" },
+                            });
+                        }
+                    }
+                }
             }
 
-            return { execution: exec, updatedTask, updatedBooking };
+            return { execution, updatedTask };
         });
 
-        return NextResponse.json(execution, { status: 201 });
+        return NextResponse.json(result, { status: 201 });
     } catch (error: any) {
         console.error("[POST /api/tasks/[id]/executions]", error);
         if (error?.name === "ZodError") {
