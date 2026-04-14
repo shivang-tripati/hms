@@ -34,7 +34,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider >
+          <AuthProvider session={session} >
             <TooltipProvider>
               <LayoutWrapper key={session?.user?.id} >{children}</LayoutWrapper>
               <Toaster richColors position="top-right" />
