@@ -19,10 +19,6 @@ const vendorColumns = [
         cell: (row: any) => row.city?.name || "—",
     },
     {
-        header: "Contract",
-        cell: (row: any) => row.ownershipContract?.contractNumber || "—",
-    },
-    {
         header: "AP Ledger",
         cell: (row: any) => row.ledger?.name || "—",
     },

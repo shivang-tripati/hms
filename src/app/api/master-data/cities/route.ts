@@ -3,9 +3,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { citySchema } from "@/lib/validations";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const cities = await prisma.city.findMany({ orderBy: { name: "asc" } });
+        const fetchAll = request.nextUrl.searchParams.get("all") === "true";
+        const whereClause = fetchAll ? {} : { isActive: true };
+        const cities = await prisma.city.findMany({ where: whereClause, orderBy: { name: "asc" } });
         return NextResponse.json(cities);
     } catch (error) {
         console.error("[GET /api/master-data/cities]", error);

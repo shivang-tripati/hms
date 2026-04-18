@@ -83,27 +83,51 @@ export default async function InvoiceDetailsPage({ params }: InvoiceDetailsPageP
                     </CardHeader>
                     <CardContent className="pt-6 space-y-6">
                         {/* Line Items */}
-                        <div className="border rounded-md">
-                            <table className="w-full text-sm text-left">
+                        <div className="border rounded-md overflow-x-auto">
+                            <table className="w-full text-sm text-left min-w-[480px]">
                                 <thead className="bg-muted text-muted-foreground font-medium border-b">
                                     <tr>
-                                        <th className="p-3 w-1/2">Description</th>
-                                        <th className="p-3 text-right">Amount</th>
+                                        <th className="p-3">Description</th>
+                                        <th className="p-3 text-right">Qty</th>
+                                        <th className="p-3 text-right">Rate</th>
+                                        <th className="p-3 text-right">Taxable</th>
+                                        <th className="p-3 text-right">GST</th>
+                                        <th className="p-3 text-right">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    <tr>
-                                        <td className="p-3">
-                                            <p className="font-medium">Booking #{invoice.booking.bookingNumber}</p>
-                                            <p className="text-muted-foreground text-xs mt-1">Holding: {invoice.booking.holding.name} ({invoice.booking.holding.code})</p>
-                                            <p className="text-muted-foreground text-xs">
-                                                Period: {formatDate(invoice.booking.startDate)} - {formatDate(invoice.booking.endDate)}
-                                            </p>
-                                        </td>
-                                        <td className="p-3 text-right font-medium">
-                                            {formatCurrency(subtotal)}
-                                        </td>
-                                    </tr>
+                                    {invoice.items && invoice.items.length > 0 ? (
+                                        invoice.items.map((row: any) => (
+                                            <tr key={row.id}>
+                                                <td className="p-3">
+                                                    <p className="font-medium">{row.description}</p>
+                                                    {row.hsnCode && (
+                                                        <p className="text-muted-foreground text-xs mt-0.5">
+                                                            HSN: {row.hsnCode.code}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="p-3 text-right tabular-nums">{Number(row.quantity).toLocaleString("en-IN")}</td>
+                                                <td className="p-3 text-right tabular-nums">{formatCurrency(row.rate)}</td>
+                                                <td className="p-3 text-right tabular-nums">{formatCurrency(row.amount)}</td>
+                                                <td className="p-3 text-right text-muted-foreground text-xs tabular-nums">
+                                                    {Number(row.gstRate)}% → {formatCurrency(row.gstAmount)}
+                                                </td>
+                                                <td className="p-3 text-right font-medium tabular-nums">{formatCurrency(row.total)}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td className="p-3" colSpan={6}>
+                                                <p className="font-medium">Booking #{invoice.booking.bookingNumber}</p>
+                                                <p className="text-muted-foreground text-xs mt-1">Holding: {invoice.booking.holding.name} ({invoice.booking.holding.code})</p>
+                                                <p className="text-muted-foreground text-xs">
+                                                    Period: {formatDate(invoice.booking.startDate)} - {formatDate(invoice.booking.endDate)}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground mt-2">No line items stored — legacy invoice header only.</p>
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

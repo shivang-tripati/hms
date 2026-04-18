@@ -10,8 +10,9 @@ export async function GET() {
             include: {
                 city: true,
                 ledger: { select: { id: true, name: true, code: true } },
-                ownershipContract: { select: { id: true, contractNumber: true, ownerName: true } },
-                _count: { select: { payments: true } },
+                contracts: { select: { id: true, contractNumber: true, holdingId: true, status: true } },
+                holdings: { select: { id: true, code: true, name: true, assetType: true } },
+                _count: { select: { payments: true, holdings: true, contracts: true } },
             },
         });
         return NextResponse.json(vendors);
@@ -29,8 +30,46 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = vendorSchema.parse(body);
 
+        let targetLedgerId = parsed.ledgerId;
+
+        if (!targetLedgerId || targetLedgerId.trim() === "") {
+            // Auto-create Ledger under "Sundry Creditors"
+            let creditorsGroup = await prisma.ledger.findFirst({
+                where: { name: "Sundry Creditors", isGroup: true }
+            });
+            if (!creditorsGroup) {
+                // Fallback: Create the parent group if missing
+                creditorsGroup = await prisma.ledger.create({
+                    data: {
+                        name: "Sundry Creditors",
+                        code: "SC-GROUP",
+                        type: "LIABILITY",
+                        isGroup: true,
+                        isPayable: true
+                    }
+                });
+            }
+
+            const newLedger = await prisma.ledger.create({
+                data: {
+                    name: `${parsed.name} - A/c`,
+                    code: `VND-${Date.now().toString().slice(-4)}`,
+                    type: "LIABILITY",
+                    isGroup: false,
+                    isPayable: true,
+                    parentId: creditorsGroup.id
+                }
+            });
+            targetLedgerId = newLedger.id;
+        }
+
+        // Remove any ledgerId from parsed if we are passing it explicitly
+        const { ledgerId, ...restParsed } = parsed;
         const vendor = await (prisma as any).vendor.create({
-            data: parsed,
+            data: {
+                ...restParsed,
+                ledgerId: targetLedgerId
+            },
             include: { ledger: true },
         });
         return NextResponse.json(vendor, { status: 201 });

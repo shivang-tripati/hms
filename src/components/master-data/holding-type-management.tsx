@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, Search, Layers } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Layers, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -91,14 +91,18 @@ export function HoldingTypeManagement({ holdingTypes }: HoldingTypeManagementPro
         setIsDialogOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this holding type?")) {
+    const handleToggleStatus = async (type: any) => {
+        const action = type.isActive ? "deactivate" : "activate";
+        if (confirm(`Are you sure you want to ${action} this holding type?`)) {
             try {
-                await apiFetch(`/api/master-data/holding-types/${id}`, { method: 'DELETE' });
-                toast.success("Holding type deleted successfully");
+                await apiFetch(`/api/master-data/holding-types/${type.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ ...type, isActive: !type.isActive }),
+                });
+                toast.success(`Holding type ${action}d successfully`);
                 router.refresh();
             } catch (error) {
-                toast.error("Failed to delete holding type");
+                toast.error(`Failed to ${action} holding type`);
             }
         }
     };
@@ -133,9 +137,9 @@ export function HoldingTypeManagement({ holdingTypes }: HoldingTypeManagementPro
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{editingType ? "Edit Holding Type" : "Add New Holding Type"}</DialogTitle>
+                            <DialogTitle>{editingType ? "Edit Hoarding Type" : "Add New Hoarding Type"}</DialogTitle>
                             <DialogDescription>
-                                Enter the details for the holding type.
+                                Enter the details for the hoarding type.
                             </DialogDescription>
                         </DialogHeader>
                         <Form {...form}>
@@ -210,16 +214,15 @@ export function HoldingTypeManagement({ holdingTypes }: HoldingTypeManagementPro
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            {type.isActive && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(type.id)}
-                                                    className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleToggleStatus(type)}
+                                                className={`h-8 w-8 ${type.isActive ? "text-muted-foreground hover:text-red-600" : "text-muted-foreground hover:text-emerald-600"}`}
+                                                title={type.isActive ? "Deactivate" : "Activate"}
+                                            >
+                                                <Power className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>

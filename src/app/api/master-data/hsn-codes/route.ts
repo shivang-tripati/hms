@@ -3,9 +3,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { hsnCodeSchema } from "@/lib/validations";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const codes = await prisma.hsnCode.findMany({ orderBy: { code: "asc" } });
+        const fetchAll = request.nextUrl.searchParams.get("all") === "true";
+        const whereClause = fetchAll ? {} : { isActive: true };
+        const codes = await prisma.hsnCode.findMany({ where: whereClause, orderBy: { code: "asc" } });
         return NextResponse.json(codes);
     } catch (error) {
         console.error("[GET /api/master-data/hsn-codes]", error);

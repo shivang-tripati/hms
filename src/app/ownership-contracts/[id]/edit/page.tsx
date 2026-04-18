@@ -16,11 +16,13 @@ export default async function EditContractPage({ params }: EditContractPageProps
 
     let contract: any;
     let holdings: any[];
+    let vendors: any[];
 
     try {
-        [contract, holdings] = await Promise.all([
+        [contract, holdings, vendors] = await Promise.all([
             apiFetch<any>(`/api/contracts/${id}`),
             apiFetch<any[]>("/api/holdings"),
+            apiFetch<any[]>("/api/accounting/vendors"),
         ]);
     } catch {
         notFound();
@@ -36,7 +38,7 @@ export default async function EditContractPage({ params }: EditContractPageProps
                 icon={Pencil}
             />
             <div className="bg-card rounded-xl border border-border/50 p-6 shadow-sm">
-                <ContractForm initialData={contract} holdings={holdings} />
+                <ContractForm initialData={contract} holdings={holdings} vendors={vendors} />
             </div>
         </div>
     );

@@ -29,8 +29,12 @@ export const BookingListColumns = [
         cell: (row: any) => row.client?.name || "N/A",
     },
     {
-        header: "Holding",
+        header: "Hoarding",
         cell: (row: any) => row.holding?.name || "N/A",
+    },
+    {
+        header: "Total Mounting",
+        cell: (row: any) => row.totalMountings || "0",
     },
     {
         header: "Duration",

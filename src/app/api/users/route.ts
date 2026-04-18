@@ -11,7 +11,6 @@ export async function GET() {
         }
 
         const users = await prisma.user.findMany({
-            where: { role: "STAFF" },
             orderBy: { createdAt: "desc" },
         });
         return NextResponse.json(users);
@@ -29,7 +28,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { name, email, password } = body;
+        const { name, email, password, role } = body;
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -39,13 +38,13 @@ export async function POST(request: NextRequest) {
                 email,
                 password: hashedPassword,
                 plainPassword: password, // As per original server action
-                role: "STAFF",
+                role: role || "STAFF",
             },
         });
 
         return NextResponse.json(user, { status: 201 });
     } catch (error) {
         console.error("[POST /api/users]", error);
-        return NextResponse.json({ error: "Failed to create staff user" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
     }
 }

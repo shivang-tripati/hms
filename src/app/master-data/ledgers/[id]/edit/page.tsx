@@ -23,7 +23,7 @@ export default async function EditLedgerPage({
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Edit Ledger"
+                title="Edit Account"
                 description={`Editing: ${ledger.name} (${ledger.code})`}
             />
             <div className="bg-card rounded-xl border shadow-sm p-6">

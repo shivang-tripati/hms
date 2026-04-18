@@ -47,12 +47,22 @@ export const holdingSchema = z.object({
     facing: z.string().optional(),
     landmark: z.string().optional(),
     status: z.enum(["AVAILABLE", "BOOKED", "UNDER_MAINTENANCE", "INACTIVE"]).default("AVAILABLE"),
+    assetType: z.enum(["OWNED", "RENTED"]).default("OWNED"),
+    vendorId: z.string().optional().nullable(),
     maintenanceCycle: z.coerce.number().int().positive().default(90),
     notes: z.string().optional(),
     images: z.array(z.string()).min(1, "At least one image is required"),
     cityId: z.string().min(1, "City is required"),
     holdingTypeId: z.string().min(1, "Holding type is required"),
     hsnCodeId: z.string().min(1, "HSN code is required"),
+}).superRefine((data, ctx) => {
+    if (data.assetType === "RENTED" && (!data.vendorId || data.vendorId.trim() === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Vendor is required when asset type is rented",
+            path: ["vendorId"],
+        });
+    }
 });
 
 export type HoldingFormData = z.infer<typeof holdingSchema>;
@@ -61,11 +71,7 @@ export type HoldingFormData = z.infer<typeof holdingSchema>;
 
 export const ownershipContractSchema = z.object({
     contractNumber: z.string().min(1, "Contract number is required"),
-    ownerName: z.string().min(1, "Owner name is required"),
-    ownerType: z.enum(["GOVERNMENT", "MUNICIPAL", "VILLAGE_PANCHAYAT", "PRIVATE"]),
-    ownerContact: z.string().optional(),
-    ownerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-    ownerAddress: z.string().optional(),
+    vendorId: z.string().min(1, "Vendor is required"),
     rentAmount: z.coerce.number().positive("Rent must be positive"),
     rentCycle: z.enum(["MONTHLY", "QUARTERLY", "HALF_YEARLY", "YEARLY"]).default("MONTHLY"),
     startDate: z.coerce.date(),
@@ -74,8 +80,14 @@ export const ownershipContractSchema = z.object({
     status: z.enum(["ACTIVE", "EXPIRED", "TERMINATED", "PENDING"]).default("ACTIVE"),
     notes: z.string().optional(),
     agreementUrl: z.string().optional(),
-    ownerKycUrl: z.string().optional(),
     holdingId: z.string().min(1, "Holding is required"),
+    // Backward compatibility during migration phase.
+    ownerName: z.string().optional(),
+    ownerType: z.enum(["GOVERNMENT", "MUNICIPAL", "VILLAGE_PANCHAYAT", "PRIVATE"]).optional(),
+    ownerContact: z.string().optional(),
+    ownerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+    ownerAddress: z.string().optional(),
+    ownerKycUrl: z.string().optional(),
 });
 
 export type OwnershipContractFormData = z.infer<typeof ownershipContractSchema>;
@@ -213,6 +225,22 @@ export const invoiceSchema = z.object({
 
 export type InvoiceFormData = z.infer<typeof invoiceSchema>;
 
+/** Line rows sent from client; amounts on invoice are recomputed server-side when items are present. */
+export const invoiceLineItemInputSchema = z.object({
+    description: z.string().min(1, "Description is required"),
+    hsnCodeId: z.string().min(1, "HSN code is required"),
+    quantity: z.coerce.number().positive("Quantity must be positive"),
+    rate: z.coerce.number().min(0, "Rate cannot be negative"),
+    bookingId: z.string().optional(),
+});
+
+export const invoiceUpsertPayloadSchema = invoiceSchema.extend({
+    items: z.array(invoiceLineItemInputSchema).optional(),
+});
+
+export type InvoiceLineItemInput = z.infer<typeof invoiceLineItemInputSchema>;
+export type InvoiceUpsertPayload = z.infer<typeof invoiceUpsertPayloadSchema>;
+
 // ─── Receipt Schemas ──────────────────────────────────────────────────────────
 
 export const receiptSchema = z.object({
@@ -277,9 +305,8 @@ export const vendorSchema = z.object({
     panNumber: z.string().optional(),
     address: z.string().min(1, "Address is required"),
     isActive: z.boolean().default(true),
-    ownershipContractId: z.string().optional().nullable(),
     cityId: z.string().optional().nullable(),
-    ledgerId: z.string().min(1, "Accounts Payable ledger is required"),
+    ledgerId: z.string().optional(),
     kycDocumentUrl: z.string().optional().nullable(),
     agreementDocumentUrl: z.string().optional().nullable(),
 });
@@ -325,7 +352,7 @@ export const invoiceItemSchema = z.object({
     description: z.string().min(1, "Description is required"),
     hsnCodeId: z.string().min(1, "HSN Code is required"),
     quantity: z.coerce.number().positive(),
-    rate: z.coerce.number().positive(),
+    rate: z.coerce.number().min(0),
     amount: z.coerce.number().min(0),
     gstRate: z.coerce.number().min(0),
     gstAmount: z.coerce.number().min(0),

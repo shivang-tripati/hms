@@ -6,7 +6,10 @@ import { ownershipContractSchema } from "@/lib/validations";
 export async function GET() {
     try {
         const contracts = await prisma.ownershipContract.findMany({
-            include: { holding: { include: { city: true } } },
+            include: {
+                holding: { include: { city: true } },
+                vendor: { select: { id: true, name: true, phone: true } },
+            },
             orderBy: { createdAt: "desc" },
         });
         return NextResponse.json(contracts);
@@ -23,7 +26,32 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const parsed = ownershipContractSchema.parse(body);
-        const contract = await prisma.ownershipContract.create({ data: parsed });
+        const holding = await prisma.holding.findUnique({
+            where: { id: parsed.holdingId },
+            select: { id: true, vendorId: true },
+        });
+        if (!holding) return NextResponse.json({ error: "Holding not found" }, { status: 404 });
+        if (holding.vendorId && holding.vendorId !== parsed.vendorId) {
+            return NextResponse.json({ error: "Holding is already linked to a different vendor" }, { status: 400 });
+        }
+        if (parsed.status === "ACTIVE") {
+            const existingActive = await prisma.ownershipContract.findFirst({
+                where: { vendorId: parsed.vendorId, holdingId: parsed.holdingId, status: "ACTIVE" },
+                select: { id: true },
+            });
+            if (existingActive) {
+                return NextResponse.json({ error: "An active contract already exists for this vendor and holding" }, { status: 409 });
+            }
+        }
+        const contract = await prisma.ownershipContract.create({
+            data: {
+                ...parsed,
+            },
+        });
+        await prisma.holding.update({
+            where: { id: parsed.holdingId },
+            data: { vendorId: parsed.vendorId, assetType: "RENTED" },
+        });
         return NextResponse.json(contract, { status: 201 });
     } catch (error: any) {
         console.error("[POST /api/contracts]", error);

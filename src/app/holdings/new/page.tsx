@@ -21,10 +21,11 @@ interface NewHoldingPageProps {
 }
 
 export default async function NewHoldingPage({ searchParams }: NewHoldingPageProps) {
-    const [cities, types, hsnCodes] = await Promise.all([
+    const [cities, types, hsnCodes, vendors] = await Promise.all([
         apiFetch<any[]>("/api/master-data/cities"),
         apiFetch<any[]>("/api/master-data/holding-types"),
         apiFetch<any[]>("/api/master-data/hsn-codes"),
+        apiFetch<any[]>("/api/accounting/vendors"),
     ]);
 
     // Construct partial initial data from search params if available
@@ -57,6 +58,7 @@ export default async function NewHoldingPage({ searchParams }: NewHoldingPagePro
                     cities={cities}
                     types={types}
                     hsnCodes={hsnCodes}
+                    vendors={vendors}
                     initialData={Object.keys(initialData).length > 0 ? initialData : undefined}
                 />
             </div>

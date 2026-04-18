@@ -3,7 +3,6 @@
 import { useForm } from "react-hook-form";
 import { useEffect, useState, useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -35,6 +34,7 @@ interface HoldingFormProps {
     cities: City[];
     types: HoldingType[];
     hsnCodes: HsnCode[];
+    vendors?: Array<{ id: string; name: string; phone?: string | null }>;
 }
 
 /**
@@ -62,7 +62,7 @@ function getCityCode(cityName: string): string {
     return `${first}${middle}${last}`;
 }
 
-export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFormProps) {
+export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = [] }: HoldingFormProps) {
     const router = useRouter();
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -95,6 +95,8 @@ export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFor
             longitude: initialData.longitude ? Number(initialData.longitude) : ("" as any),
             illumination: (initialData.illumination as "LIT" | "NON_LIT" | "DIGITAL") || "NON_LIT",
             status: (initialData.status as "AVAILABLE" | "BOOKED" | "UNDER_MAINTENANCE" | "INACTIVE") || "AVAILABLE",
+            assetType: (initialData.assetType as "OWNED" | "RENTED") || "OWNED",
+            vendorId: (initialData as any).vendorId || undefined,
             maintenanceCycle: initialData.maintenanceCycle || 90,
             cityId: initialData.cityId || "",
             holdingTypeId: initialData.holdingTypeId || "",
@@ -113,6 +115,8 @@ export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFor
             totalArea: 0,
             illumination: "NON_LIT",
             status: "AVAILABLE",
+            assetType: "OWNED",
+            vendorId: undefined,
             maintenanceCycle: 90,
             cityId: "",
             holdingTypeId: "",
@@ -197,7 +201,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFor
                         name="code"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Holding Code</FormLabel>
+                                <FormLabel>Hoarding Code</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Auto-generated unique code" {...field} readOnly className="bg-muted" />
                                 </FormControl>
@@ -396,6 +400,61 @@ export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFor
 
                     <FormField
                         control={form.control}
+                        name="assetType"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Asset Type</FormLabel>
+                                <Select onValueChange={(value) => {
+                                    field.onChange(value);
+                                    if (value === "OWNED") form.setValue("vendorId", undefined);
+                                }} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select asset type" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="OWNED">Owned</SelectItem>
+                                        <SelectItem value="RENTED">Rented</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="vendorId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Vendor</FormLabel>
+                                <Select
+                                    onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
+                                    defaultValue={field.value || "none"}
+                                    disabled={form.watch("assetType") === "OWNED"}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select vendor" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="none">No vendor</SelectItem>
+                                        {vendors.map((vendor) => (
+                                            <SelectItem key={vendor.id} value={vendor.id}>
+                                                {vendor.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
                         name="status"
                         render={({ field }) => (
                             <FormItem>
@@ -556,7 +615,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes }: HoldingFor
                         {isFromSuggestion && (form.getValues("images")?.length ?? 0) > 0 && (
                             <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 6 9 17l-5-5"/>
+                                    <path d="M20 6 9 17l-5-5" />
                                 </svg>
                                 Images auto-filled from suggestion. You can add or remove images.
                             </p>

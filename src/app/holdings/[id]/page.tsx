@@ -10,7 +10,6 @@ import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation } fr
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { auth } from "@/auth";
-import Image from "next/image";
 import { PhotoGallery } from "@/components/shared/photo-gallery";
 
 interface HoldingDetailsPageProps {
@@ -175,6 +174,88 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Vendor Details */}
+                {role === "ADMIN" && holding.vendor && (
+                    <Card className="col-span-2">
+                        <CardHeader>
+                            <CardTitle className="text-base">Vendor Details</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm">
+                            <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+                                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Vendor Name</p>
+                                <p className="font-bold text-primary">{holding.vendor.name}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Status: {holding.vendor.isActive ? "Active" : "Inactive"}
+                                </p>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-muted-foreground mb-1">Contact Person</p>
+                                    <p className="font-medium">{holding.vendor.contactPerson || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground mb-1">Phone</p>
+                                    <p className="font-medium">{holding.vendor.phone || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground mb-1">Email</p>
+                                    <p className="font-medium">{holding.vendor.email || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground mb-1">City</p>
+                                    <p className="font-medium">{holding.vendor.city?.name || "N/A"}</p>
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <p className="text-muted-foreground mb-1">Address</p>
+                                    <p className="font-medium">{holding.vendor.address || "N/A"}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-muted-foreground mb-1">GST Number</p>
+                                    <p className="font-medium">{holding.vendor.gstNumber || "N/A"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground mb-1">PAN Number</p>
+                                    <p className="font-medium">{holding.vendor.panNumber || "N/A"}</p>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <p className="text-muted-foreground">KYC Document</p>
+                                    {holding.vendor.kycDocumentUrl ? (
+                                        <Button asChild variant="outline" className="w-full" size="sm">
+                                            <a href={holding.vendor.kycDocumentUrl} target="_blank" rel="noopener noreferrer">
+                                                View KYC Document
+                                            </a>
+                                        </Button>
+                                    ) : (
+                                        <p className="font-medium">N/A</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <p className="text-muted-foreground">Agreement Document</p>
+                                    {holding.vendor.agreementDocumentUrl ? (
+                                        <Button asChild variant="outline" className="w-full" size="sm">
+                                            <a href={holding.vendor.agreementDocumentUrl} target="_blank" rel="noopener noreferrer">
+                                                View Agreement
+                                            </a>
+                                        </Button>
+                                    ) : (
+                                        <p className="font-medium">N/A</p>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );

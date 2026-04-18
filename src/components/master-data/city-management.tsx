@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, Search, MapPin } from "lucide-react";
+import { Plus, Edit, Trash2, Search, MapPin, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -92,14 +92,18 @@ export function CityManagement({ cities }: CityManagementProps) {
         setIsDialogOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this city?")) {
+    const handleToggleStatus = async (city: any) => {
+        const action = city.isActive ? "deactivate" : "activate";
+        if (confirm(`Are you sure you want to ${action} this city?`)) {
             try {
-                await apiFetch(`/api/master-data/cities/${id}`, { method: 'DELETE' });
-                toast.success("City deleted successfully");
+                await apiFetch(`/api/master-data/cities/${city.id}`, { 
+                    method: 'PUT', 
+                    body: JSON.stringify({ ...city, isActive: !city.isActive })
+                });
+                toast.success(`City ${action}d successfully`);
                 router.refresh();
             } catch (error) {
-                toast.error("Failed to delete city");
+                toast.error(`Failed to ${action} city`);
             }
         }
     };
@@ -225,16 +229,15 @@ export function CityManagement({ cities }: CityManagementProps) {
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            {city.isActive && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(city.id)}
-                                                    className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleToggleStatus(city)}
+                                                className={`h-8 w-8 ${city.isActive ? "text-muted-foreground hover:text-red-600" : "text-muted-foreground hover:text-emerald-600"}`}
+                                                title={city.isActive ? "Deactivate" : "Activate"}
+                                            >
+                                                <Power className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>

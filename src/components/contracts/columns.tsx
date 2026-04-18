@@ -24,13 +24,9 @@ export const ContractListColumns = [
         className: "font-medium",
     },
     {
-        header: "Owner",
-        accessorKey: "ownerName",
+        header: "Vendor",
+        cell: (row: any) => row.vendor?.name || "N/A",
         className: "max-w-[180px] truncate",
-    },
-    {
-        header: "Land Type",
-        cell: (row: any) => formatEnum(row.ownerType),
     },
     {
         header: "Holding",

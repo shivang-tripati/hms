@@ -15,8 +15,6 @@ type LedgerFlag =
     | "Tax Out"
     | "Tax In";
 
-const flags: LedgerFlag[] = [];
-
 const typeIcons: Record<string, any> = {
     ASSET: Wallet,
     LIABILITY: FileText,
@@ -77,6 +75,13 @@ function LedgerNode({ ledger, allLedgers }: { ledger: any; allLedgers: any[] }) 
                     )}
                 </div>
                 <Badge className={`text-xs ${typeColors[ledger.type]}`}>{ledger.type}</Badge>
+                {!ledger.isGroup && (
+                    <Link href={`/accounting/ledgers/${ledger.id}/statement`}>
+                        <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600 dark:text-indigo-400">
+                            View Ledger
+                        </Button>
+                    </Link>
+                )}
                 <Link href={`/master-data/ledgers/${ledger.id}/edit`}>
                     <Button size="sm" variant="ghost" className="opacity-0 group-hover:opacity-100 transition-opacity">
                         Edit

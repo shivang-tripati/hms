@@ -26,11 +26,19 @@ import { UserPlus, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const staffSchema = z.object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
+    role: z.enum(["ADMIN", "STAFF"]),
 });
 
 type StaffFormValues = z.infer<typeof staffSchema>;
@@ -44,6 +52,7 @@ export function AddStaffModal() {
             name: "",
             email: "",
             password: "",
+            role: "STAFF",
         },
     });
 
@@ -53,12 +62,12 @@ export function AddStaffModal() {
                 method: 'POST',
                 body: JSON.stringify(data),
             });
-            toast.success("Staff member created successfully");
+            toast.success("User created successfully");
             setOpen(false);
             form.reset();
             router.refresh();
         } catch (error) {
-            toast.error("Failed to create staff member");
+            toast.error("Failed to create user");
             console.error(error);
         }
     };
@@ -67,14 +76,14 @@ export function AddStaffModal() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className="bg-indigo-600 hover:bg-indigo-700">
-                    <UserPlus className="mr-2 h-4 w-4" /> Add Staff Member
+                    <UserPlus className="mr-2 h-4 w-4" /> Add User
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Add New Staff Member</DialogTitle>
+                    <DialogTitle>Add New User</DialogTitle>
                     <DialogDescription>
-                        Create a new staff account. They can login with these credentials.
+                        Create a new user account. They can login with these credentials.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -118,6 +127,30 @@ export function AddStaffModal() {
                                 </FormItem>
                             )}
                         />
+                        <FormField
+                            control={form.control}
+                            name="role"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>User Role</FormLabel>
+                                    <Select 
+                                        onValueChange={field.onChange} 
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a role" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="ADMIN">Admin</SelectItem>
+                                            <SelectItem value="STAFF">Staff</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <div className="flex justify-end gap-3 pt-4">
                             <Button variant="outline" type="button" onClick={() => setOpen(false)}>
                                 Cancel
@@ -128,7 +161,7 @@ export function AddStaffModal() {
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
                                     </>
                                 ) : (
-                                    "Create Staff"
+                                    "Create User"
                                 )}
                             </Button>
                         </div>

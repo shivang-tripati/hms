@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Edit, Trash2, Search, Hash } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Hash, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -92,14 +92,18 @@ export function HsnCodeManagement({ hsnCodes }: HsnCodeManagementProps) {
         setIsDialogOpen(true);
     };
 
-    const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this HSN code?")) {
+    const handleToggleStatus = async (hsn: any) => {
+        const action = hsn.isActive ? "deactivate" : "activate";
+        if (confirm(`Are you sure you want to ${action} this HSN code?`)) {
             try {
-                await apiFetch(`/api/master-data/hsn-codes/${id}`, { method: 'DELETE' });
-                toast.success("HSN code deleted successfully");
+                await apiFetch(`/api/master-data/hsn-codes/${hsn.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ ...hsn, isActive: !hsn.isActive, gstRate: Number(hsn.gstRate) }),
+                });
+                toast.success(`HSN code ${action}d successfully`);
                 router.refresh();
             } catch (error) {
-                toast.error("Failed to delete HSN code");
+                toast.error(`Failed to ${action} HSN code`);
             }
         }
     };
@@ -225,16 +229,15 @@ export function HsnCodeManagement({ hsnCodes }: HsnCodeManagementProps) {
                                             >
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            {hsn.isActive && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(hsn.id)}
-                                                    className="h-8 w-8 text-muted-foreground hover:text-red-600"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleToggleStatus(hsn)}
+                                                className={`h-8 w-8 ${hsn.isActive ? "text-muted-foreground hover:text-red-600" : "text-muted-foreground hover:text-emerald-600"}`}
+                                                title={hsn.isActive ? "Deactivate" : "Activate"}
+                                            >
+                                                <Power className="h-4 w-4" />
+                                            </Button>
                                         </div>
                                     </TableCell>
                                 </TableRow>

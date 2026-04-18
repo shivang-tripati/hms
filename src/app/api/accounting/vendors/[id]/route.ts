@@ -14,7 +14,6 @@ export async function GET(
             include: {
                 city: true,
                 ledger: true,
-                ownershipContract: true,
                 payments: {
                     orderBy: { paymentDate: "desc" },
                     include: { cashBankLedger: { select: { name: true } } },
@@ -58,9 +57,7 @@ export async function PUT(
             // Relations
             city: parsed.cityId ? { connect: { id: parsed.cityId } } : undefined,
             ledger: parsed.ledgerId ? { connect: { id: parsed.ledgerId } } : undefined,
-            ownershipContract: parsed.ownershipContractId
-                ? { connect: { id: parsed.ownershipContractId } }
-                : undefined,
+               
         };
 
         const vendor = await prisma.vendor.update({

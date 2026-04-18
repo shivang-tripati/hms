@@ -63,6 +63,8 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
   const hsnCode = invoice.hsnCode;
   const booking = invoice.booking;
   const settings = invoice.settings || {};
+  const lineItems = Array.isArray(invoice.items) ? invoice.items : [];
+  const hasLineItems = lineItems.length > 0;
 
   // Date formatting
   const fmtDate = (d: string) => {
@@ -310,44 +312,86 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "3mm",
-                  verticalAlign: "top",
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>
-                  {holding?.name || "—"}
-                </div>
-                <div style={{ fontSize: "9pt", color: "#555", marginTop: "1mm" }}>
-                  {holdingAddress}
-                </div>
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {hsnCode?.code || "—"}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {holdingSize}
-                {holding?.holdingType?.name ? ` (${holding.holdingType.name})` : ""}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {formatINR(Number(booking.monthlyRate))}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {durationLabel}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {formatINR(cgstAmount)}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                {formatINR(sgstAmount)}
-              </td>
-              <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "right", fontWeight: 600 }}>
-                {formatINR(subtotal)}
-              </td>
-            </tr>
+            {hasLineItems ? (
+              lineItems.map((row: any) => (
+                <tr key={row.id}>
+                  <td
+                    style={{
+                      border: "1px solid #ccc",
+                      padding: "3mm",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{row.description}</div>
+                    {row.hsnCode?.code && (
+                      <div style={{ fontSize: "9pt", color: "#555", marginTop: "1mm" }}>
+                        HSN/SAC: {row.hsnCode.code}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    {row.hsnCode?.code || "—"}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    —
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    {formatINR(Number(row.rate))}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    {Number(row.quantity).toLocaleString("en-IN")}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    {formatINR((Number(row.amount) * Number(invoice.cgstRate || 0)) / 100)}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                    {formatINR((Number(row.amount) * Number(invoice.sgstRate || 0)) / 100)}
+                  </td>
+                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "right", fontWeight: 600 }}>
+                    {formatINR(Number(row.amount))}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "3mm",
+                    verticalAlign: "top",
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>
+                    {holding?.name || "—"}
+                  </div>
+                  <div style={{ fontSize: "9pt", color: "#555", marginTop: "1mm" }}>
+                    {holdingAddress}
+                  </div>
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {hsnCode?.code || "—"}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {holdingSize}
+                  {holding?.holdingType?.name ? ` (${holding.holdingType.name})` : ""}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {formatINR(Number(booking.monthlyRate))}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {durationLabel}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {formatINR(cgstAmount)}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
+                  {formatINR(sgstAmount)}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "right", fontWeight: 600 }}>
+                  {formatINR(subtotal)}
+                </td>
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr style={{ backgroundColor: "#f5f5fa" }}>

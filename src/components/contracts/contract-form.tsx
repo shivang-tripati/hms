@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 interface ContractFormProps {
     initialData?: any;
     holdings: any[];
+    vendors: any[];
 }
 
 // ─── PDF Upload Widget ─────────────────────────────────────────────────────────
@@ -149,17 +150,13 @@ function PdfUploadField({ label, value, onChange, hint }: PdfUploadFieldProps) {
 
 // ─── Contract Form ─────────────────────────────────────────────────────────────
 
-export function ContractForm({ initialData, holdings }: ContractFormProps) {
+export function ContractForm({ initialData, holdings, vendors }: ContractFormProps) {
     const router = useRouter();
 
     const defaultValues: Partial<OwnershipContractFormData> = initialData
         ? {
             contractNumber: initialData.contractNumber,
-            ownerName: initialData.ownerName,
-            ownerType: initialData.ownerType,
-            ownerContact: initialData.ownerContact || undefined,
-            ownerEmail: initialData.ownerEmail || undefined,
-            ownerAddress: initialData.ownerAddress || undefined,
+            vendorId: initialData.vendorId || "",
             rentAmount: Number(initialData.rentAmount),
             rentCycle: initialData.rentCycle,
             startDate: new Date(initialData.startDate),
@@ -168,13 +165,11 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
             status: initialData.status,
             notes: initialData.notes || undefined,
             agreementUrl: initialData.agreementUrl || undefined,
-            ownerKycUrl: initialData.ownerKycUrl || undefined,
             holdingId: initialData.holdingId,
         }
         : {
             contractNumber: "",
-            ownerName: "",
-            ownerType: "PRIVATE",
+            vendorId: "",
             rentAmount: 0,
             rentCycle: "MONTHLY",
             startDate: new Date(),
@@ -187,6 +182,10 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
         resolver: zodResolver(ownershipContractSchema) as any,
         defaultValues: defaultValues as any,
     });
+    const selectedVendorId = useWatch({ control: form.control, name: "vendorId" });
+    const filteredHoldings = selectedVendorId
+        ? holdings.filter((holding: any) => holding.vendorId === selectedVendorId)
+        : [];
 
     // Auto-generate contract number for new contracts
     useEffect(() => {
@@ -239,6 +238,40 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
 
                     <FormField
                         control={form.control}
+                        name="vendorId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Vendor</FormLabel>
+                                <Select
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        const currentHoldingId = form.getValues("holdingId");
+                                        if (currentHoldingId && !holdings.some((h: any) => h.id === currentHoldingId && h.vendorId === value)) {
+                                            form.setValue("holdingId", "");
+                                        }
+                                    }}
+                                    defaultValue={field.value}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className="max-w-full">
+                                            <SelectValue placeholder="Select vendor" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {vendors.map((v: any) => (
+                                            <SelectItem key={v.id} value={v.id}>
+                                                {v.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
                         name="holdingId"
                         render={({ field }) => (
                             <FormItem>
@@ -250,7 +283,7 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {holdings.map((h: any) => (
+                                        {filteredHoldings.map((h: any) => (
                                             <SelectItem key={h.id} value={h.id}>
                                                 {h.code} – {h.name}
                                             </SelectItem>
@@ -261,128 +294,24 @@ export function ContractForm({ initialData, holdings }: ContractFormProps) {
                             </FormItem>
                         )}
                     />
-
-                    {/* ── Owner Details ─────────────────────────────────────── */}
                     <div className="col-span-2 border-t pt-4">
-                        <p className="font-semibold text-sm mb-4">Owner Details</p>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="ownerName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Owner Name</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Name of the land/property owner" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="ownerType"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Land Type</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select type" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="GOVERNMENT">Government</SelectItem>
-                                                <SelectItem value="MUNICIPAL">Municipal</SelectItem>
-                                                <SelectItem value="VILLAGE_PANCHAYAT">Village Panchayat</SelectItem>
-                                                <SelectItem value="PRIVATE">Private</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="ownerContact"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Contact Number</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="9876543210" {...field} value={field.value || ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="ownerEmail"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                            <Input type="email" placeholder="owner@example.com" {...field} value={field.value || ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="ownerAddress"
-                                render={({ field }) => (
-                                    <FormItem className="col-span-2">
-                                        <FormLabel>Owner Address</FormLabel>
-                                        <FormControl>
-                                            <Textarea placeholder="Full address" {...field} value={field.value || ""} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            {/* ── Document Uploads ────────────────────────────── */}
-                            <FormField
-                                control={form.control}
-                                name="agreementUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <PdfUploadField
-                                                label="Agreement Document"
-                                                hint="Upload the signed ownership/rental agreement (PDF)"
-                                                value={field.value ?? undefined}
-                                                onChange={(url) => field.onChange(url ?? null)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="ownerKycUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormControl>
-                                            <PdfUploadField
-                                                label="Owner KYC Document"
-                                                hint="Upload the owner's KYC (Aadhaar / PAN / Passport) as PDF"
-                                                value={field.value ?? undefined}
-                                                onChange={(url) => field.onChange(url ?? null)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="agreementUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <PdfUploadField
+                                            label="Agreement Document"
+                                            hint="Upload the signed contract agreement (PDF)"
+                                            value={field.value ?? undefined}
+                                            onChange={(url) => field.onChange(url ?? null)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
 
                     {/* ── Financial & Terms ─────────────────────────────────── */}

@@ -5,10 +5,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatCurrency, formatEnum } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays, Paperclip, Download } from "lucide-react";
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
 
 interface ContractDetailsPageProps {
     params: {
@@ -32,7 +31,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <PageHeader
                     title={contract.contractNumber}
-                    description={`Owner: ${contract.ownerName} | Holding: ${contract.holding?.code || "N/A"}`}
+                    description={`Vendor: ${contract.vendor?.name || "N/A"} | Holding: ${contract.holding?.code || "N/A"}`}
                     icon={FileText}
                 />
                 <div className="flex items-center gap-2">
@@ -46,33 +45,21 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Owner Details */}
+                {/* Vendor Details */}
                 <Card className="col-span-2">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
-                            <User className="h-4 w-4" /> Owner Details
+                            <User className="h-4 w-4" /> Vendor Details
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="grid sm:grid-cols-2 gap-6 text-sm">
                         <div>
-                            <p className="text-muted-foreground mb-1">Owner Name</p>
-                            <p className="font-medium text-base">{contract.ownerName}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground mb-1">Land Type</p>
-                            <p className="font-medium">{formatEnum(contract.ownerType)}</p>
+                            <p className="text-muted-foreground mb-1">Vendor Name</p>
+                            <p className="font-medium text-base">{contract.vendor?.name || "N/A"}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground mb-1">Contact</p>
-                            <p className="font-medium">{contract.ownerContact || "N/A"}</p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground mb-1">Email</p>
-                            <p className="font-medium">{contract.ownerEmail || "N/A"}</p>
-                        </div>
-                        <div className="col-span-2">
-                            <p className="text-muted-foreground mb-1">Address</p>
-                            <p className="font-medium">{contract.ownerAddress || "N/A"}</p>
+                            <p className="font-medium">{contract.vendor?.phone || "N/A"}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -165,7 +152,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                 )}
 
                 {/* Documents */}
-                {(contract.agreementUrl || contract.ownerKycUrl) && (
+                {contract.agreementUrl && (
                     <Card className="col-span-full">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
@@ -182,18 +169,6 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                                 >
                                     <FileText className="h-4 w-4 text-primary" />
                                     Agreement Document
-                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
-                                </a>
-                            )}
-                            {contract.ownerKycUrl && (
-                                <a
-                                    href={contract.ownerKycUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
-                                >
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    Owner KYC Document
                                     <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
                                 </a>
                             )}

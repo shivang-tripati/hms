@@ -3,9 +3,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { holdingTypeSchema } from "@/lib/validations";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const types = await prisma.holdingType.findMany({ orderBy: { name: "asc" } });
+        const fetchAll = request.nextUrl.searchParams.get("all") === "true";
+        const whereClause = fetchAll ? {} : { isActive: true };
+        const types = await prisma.holdingType.findMany({ where: whereClause, orderBy: { name: "asc" } });
         return NextResponse.json(types);
     } catch (error) {
         console.error("[GET /api/master-data/holding-types]", error);

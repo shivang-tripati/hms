@@ -13,7 +13,7 @@ export default async function OwnershipContractsPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Ownership Contracts"
-                description="Manage land and property ownership contracts for your holdings."
+                description="Manage vendor contracts mapped to each holding."
                 icon={FileText}
             >
                 <Button asChild className="w-full sm:w-auto">

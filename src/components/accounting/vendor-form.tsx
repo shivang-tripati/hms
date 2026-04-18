@@ -33,7 +33,7 @@ interface VendorFormProps {
     ownershipContracts: any[];
 }
 
-export function VendorForm({ initialData, cities, ledgers, ownershipContracts }: VendorFormProps) {
+export function VendorForm({ initialData, cities, ledgers }: VendorFormProps) {
     const router = useRouter();
 
     const defaultValues: Partial<VendorFormData> = initialData
@@ -46,7 +46,6 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
             panNumber: initialData.panNumber || "",
             address: initialData.address,
             isActive: initialData.isActive,
-            ownershipContractId: initialData.ownershipContractId || undefined,
             cityId: initialData.cityId || undefined,
             ledgerId: initialData.ledgerId,
             kycDocumentUrl: initialData.kycDocumentUrl || undefined,
@@ -61,7 +60,6 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
             panNumber: "",
             address: "",
             isActive: true,
-            ownershipContractId: undefined,
             cityId: undefined,
             ledgerId: "",
             kycDocumentUrl: undefined,
@@ -77,7 +75,6 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
         try {
             const payload = {
                 ...data,
-                ownershipContractId: data.ownershipContractId || null,
                 cityId: data.cityId || null,
             };
 
@@ -102,10 +99,7 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
         }
     };
 
-    // Filter ledgers to only AP-type
-    const apLedgers = ledgers.filter(
-        (l: any) => l.isPayable || l.type === "LIABILITY",
-    );
+    // AP Ledgers auto-created if not selected
 
     return (
         <Form {...form}>
@@ -216,7 +210,7 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
                             <FormItem>
                                 <FormLabel>City</FormLabel>
                                 <Select
-                                    onValueChange={field.onChange}
+                                    onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
                                     defaultValue={field.value || undefined}
                                 >
                                     <FormControl>
@@ -237,35 +231,9 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
                         )}
                     />
 
-                    <FormField
-                        control={form.control}
-                        name="ledgerId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Accounts Payable Ledger</FormLabel>
-                                <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select AP ledger" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {apLedgers.map((l: any) => (
-                                            <SelectItem key={l.id} value={l.id}>
-                                                {l.code} — {l.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
 
-                    <FormField
+
+                    {/* <FormField
                         control={form.control}
                         name="ownershipContractId"
                         render={({ field }) => (
@@ -284,7 +252,7 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
                                         <SelectItem value="none">— No Contract —</SelectItem>
                                         {ownershipContracts.map((c: any) => (
                                             <SelectItem key={c.id} value={c.id}>
-                                                {c.contractNumber} — {c.ownerName}
+                                                {c.contractNumber} — {c.vendor?.name || c.holding?.code || "Linked contract"}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -292,7 +260,7 @@ export function VendorForm({ initialData, cities, ledgers, ownershipContracts }:
                                 <FormMessage />
                             </FormItem>
                         )}
-                    />
+                    /> */}
 
                     {/* ── Document Uploads ─────────────────────────────────── */}
                     <div className="row-span-2 border-t pt-4">

@@ -12,9 +12,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const { id } = await params;
         const body = await request.json();
-        const { name, email, password } = body;
+        const { name, email, password, role, isActive } = body;
 
         const updateData: any = { name, email };
+        if (role) updateData.role = role;
+        if (typeof isActive === "boolean") updateData.isActive = isActive;
 
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);

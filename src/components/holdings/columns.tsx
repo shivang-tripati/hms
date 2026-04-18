@@ -35,6 +35,10 @@ export const HoldingListColumns = [
         className: "max-w-[200px] truncate",
     },
     {
+        header: "Vendor",
+        cell: (row: any) => row.vendor?.name || "N/A",
+    },
+    {
         header: "Type",
         cell: (row: any) => row.holdingType?.name || "N/A",
     },

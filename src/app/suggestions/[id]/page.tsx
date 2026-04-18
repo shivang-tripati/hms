@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { MapPin, Phone, User, ArrowRight } from "lucide-react";
+import { MapPin, Phone, User, ArrowRight, Navigation } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { SuggestionStatusActions } from "@/components/suggestions/suggestion-status-actions";
@@ -54,6 +54,19 @@ export default async function SuggestionDetailsPage({ params }: SuggestionDetail
                             <Link href={`/holdings/new?suggestionId=${suggestion.id}&address=${encodeURIComponent(suggestion.address)}&cityId=${suggestion.cityId}&lat=${suggestion.latitude || ""}&lng=${suggestion.longitude || ""}${suggestion.landmark ? `&landmark=${encodeURIComponent(suggestion.landmark)}` : ""}${suggestion.photos?.length ? `&photos=${encodeURIComponent(JSON.stringify(suggestion.photos))}` : ""}`}>
                                 Convert to Holding <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
+                        </Button>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {suggestion.latitude && suggestion.longitude && (
+                        <Button asChild variant="outline" size="sm">
+                            <a
+                                href={`https://maps.google.com/?q=${suggestion.latitude},${suggestion.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <Navigation className="mr-2 h-4 w-4" /> Navigate
+                            </a>
                         </Button>
                     )}
                 </div>

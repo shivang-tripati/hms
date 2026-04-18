@@ -10,6 +10,7 @@ export async function GET() {
                 city: true,
                 holdingType: true,
                 hsnCode: true,
+                vendor: { select: { id: true, name: true, phone: true } },
                 _count: {
                     select: {
                         bookings: true,
@@ -35,7 +36,12 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const parsed = holdingSchema.parse(body);
-        const holding = await prisma.holding.create({ data: parsed });
+        const holding = await prisma.holding.create({
+            data: {
+                ...parsed,
+                vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
+            },
+        });
         return NextResponse.json(holding, { status: 201 });
     } catch (error: any) {
         console.error("[POST /api/holdings]", error);

@@ -12,8 +12,8 @@ export default async function StaffManagementPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <PageHeader
-                    title="Staff Management"
-                    description="Manage staff accounts and view their credentials."
+                    title="User Management"
+                    description="Manage user accounts and view their credentials."
                     icon={Users}
                 />
                 <AddStaffModal />

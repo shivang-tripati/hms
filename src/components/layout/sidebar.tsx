@@ -27,16 +27,15 @@ import { logout } from "@/actions/auth";
 
 const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["ADMIN", "STAFF"] },
+    { name: "Vendors", href: "/master-data/vendors", icon: Building2, roles: ["ADMIN"] },
     { name: "Hoardings", href: "/holdings", icon: Building2, roles: ["ADMIN"] },
-    { name: "Clients", href: "/clients", icon: Users, roles: ["ADMIN"] },
     { name: "Ownership Contracts", href: "/ownership-contracts", icon: FileText, roles: ["ADMIN"] },
+    { name: "Clients", href: "/clients", icon: Users, roles: ["ADMIN"] },
     { name: "Bookings", href: "/bookings", icon: FileText, roles: ["ADMIN"] },
     { name: "Advertisements", href: "/advertisements", icon: FileText, roles: ["ADMIN"] },
     { name: "Tasks", href: "/tasks", icon: CheckSquare, roles: ["ADMIN", "STAFF"] },
     { name: "Suggestions", href: "/suggestions", icon: MapPin, roles: ["ADMIN", "STAFF"] },
     { name: "Billing", href: "/billing", icon: FileText, roles: ["ADMIN"] },
-    { name: "Ledgers", href: "/master-data/ledgers", icon: Layers, roles: ["ADMIN"] },
-    { name: "Vendors", href: "/master-data/vendors", icon: Building2, roles: ["ADMIN"] },
     { name: "Journal Entries", href: "/accounting/journal-entries", icon: BookOpen, roles: ["ADMIN"] },
     { name: "Payments", href: "/accounting/payments", icon: CreditCard, roles: ["ADMIN"] },
     { name: "Analytics", href: "/reports/analytics", icon: BarChart3, roles: ["ADMIN"] },
@@ -44,9 +43,10 @@ const navigation = [
 ];
 
 const generalSettingsSubmenus = [
+    { name: "Accounts Master", href: "/master-data/ledgers", icon: Layers, roles: ["ADMIN"] },
     { name: "Company Profile", href: "/settings", icon: Building2, roles: ["ADMIN"] },
     { name: "Master Data", href: "/master-data", icon: Database, roles: ["ADMIN"] },
-    { name: "Staff", href: "/admin/staff", icon: Users, roles: ["ADMIN"] },
+    { name: "User", href: "/admin/staff", icon: Users, roles: ["ADMIN"] },
 ];
 
 export function SidebarContent({ className, onLinkClick }: { className?: string; onLinkClick?: () => void }) {

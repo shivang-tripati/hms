@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewContractPage() {
-    const holdings = await apiFetch<any[]>("/api/holdings");
+    const [holdings, vendors] = await Promise.all([
+        apiFetch<any[]>("/api/holdings"),
+        apiFetch<any[]>("/api/accounting/vendors"),
+    ]);
 
     return (
         <div className="space-y-6 max-w-3xl mx-auto">
@@ -17,7 +20,7 @@ export default async function NewContractPage() {
                 icon={PlusCircle}
             />
             <div className="bg-card rounded-xl border border-border/50 p-6 shadow-sm">
-                <ContractForm holdings={holdings} />
+                <ContractForm holdings={holdings} vendors={vendors} />
             </div>
         </div>
     );

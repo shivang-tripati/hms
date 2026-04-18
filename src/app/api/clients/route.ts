@@ -26,7 +26,41 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const parsed = clientSchema.parse(body);
-        const client = await prisma.client.create({ data: parsed });
+
+        // Auto-create Ledger under "Sundry Debtors"
+        let debtorsGroup = await prisma.ledger.findFirst({
+            where: { name: "Sundry Debtors", isGroup: true }
+        });
+        
+        if (!debtorsGroup) {
+            debtorsGroup = await prisma.ledger.create({
+                data: {
+                    name: "Sundry Debtors",
+                    code: "SD-GROUP",
+                    type: "ASSET",
+                    isGroup: true,
+                    isReceivable: true
+                }
+            });
+        }
+
+        const newLedger = await prisma.ledger.create({
+            data: {
+                name: `${parsed.name} - A/c`,
+                code: `CLI-${Date.now().toString().slice(-4)}`,
+                type: "ASSET",
+                isGroup: false,
+                isReceivable: true,
+                parentId: debtorsGroup.id
+            }
+        });
+
+        const client = await prisma.client.create({
+            data: {
+                ...parsed,
+                ledgerId: newLedger.id
+            }
+        });
         return NextResponse.json(client, { status: 201 });
     } catch (error: any) {
         console.error("[POST /api/clients]", error);

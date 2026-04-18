@@ -8,9 +8,9 @@ import { MapPin, Layers, Hash } from "lucide-react";
 
 export default async function MasterDataPage() {
     const [cities, holdingTypes, hsnCodes] = await Promise.all([
-        apiFetch<any[]>("/api/master-data/cities", { revalidate: 60 }),
-        apiFetch<any[]>("/api/master-data/holding-types", { revalidate: 60 }),
-        apiFetch<any[]>("/api/master-data/hsn-codes", { revalidate: 60 }),
+        apiFetch<any[]>("/api/master-data/cities?all=true", { revalidate: 60 }),
+        apiFetch<any[]>("/api/master-data/holding-types?all=true", { revalidate: 60 }),
+        apiFetch<any[]>("/api/master-data/hsn-codes?all=true", { revalidate: 60 }),
     ]);
 
     return (

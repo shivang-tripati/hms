@@ -23,6 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                     });
 
                     if (!user) return null;
+                    if (!user.isActive) throw new Error("AccountDisabled");
 
                     const passwordsMatch = await bcrypt.compare(password, user.password);
 

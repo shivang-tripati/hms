@@ -21,7 +21,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             where: { id: taskId },
             include: {
                 advertisement: {
-                    select: { bookingId: true },
+                    select: { 
+                        bookingId: true,
+                        booking: {
+                            select: { holdingId: true }
+                        }
+                    },
+                },
+                booking: {
+                    select: { holdingId: true }
                 },
                 executions: {
                     orderBy: { createdAt: "desc" },
@@ -58,12 +66,38 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     });
                 }
 
+
+
                 // If this is MOUNTING task being COMPLETED, increment counts
                 if (task.taskType === "MOUNTING" && task.advertisement?.bookingId) {
                     updatedBooking = await (tx as any).booking.update({
                         where: { id: task.advertisement.bookingId },
                         data: { totalMountings: { increment: 1 } },
                     });
+                }
+
+                // Save execution images into holding
+                const targetHoldingId = task.holdingId || task.booking?.holdingId || task.advertisement?.booking?.holdingId;
+                if (targetHoldingId && latestExecution) {
+                    const newImages: string[] = [];
+                    if (latestExecution.frontViewUrl) newImages.push(latestExecution.frontViewUrl);
+                    if (latestExecution.leftViewUrl) newImages.push(latestExecution.leftViewUrl);
+                    if (latestExecution.rightViewUrl) newImages.push(latestExecution.rightViewUrl);
+
+                    if (newImages.length > 0) {
+                        const h = await (tx as any).holding.findUnique({
+                            where: { id: targetHoldingId },
+                            select: { images: true }
+                        });
+                        
+                        if (h) {
+                            const updatedImages = [...(h.images || []), ...newImages];
+                            await (tx as any).holding.update({
+                                where: { id: targetHoldingId },
+                                data: { images: updatedImages }
+                            });
+                        }
+                    }
                 }
             } else if (action === "REJECT") {
                 // Determine new notes with rejection reason

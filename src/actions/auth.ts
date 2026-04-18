@@ -25,11 +25,16 @@ export async function authenticate(
         return "__success__";
     } catch (error) {
         if (error instanceof AuthError) {
+            // Check for our custom "AccountDisabled" error thrown in authorize
+            if (error.cause?.err?.message === "AccountDisabled" || error.message.includes("AccountDisabled")) {
+                return "Your account has been deactivated. Please contact the administrator.";
+            }
+
             switch (error.type) {
                 case "CredentialsSignin":
-                    return "Invalid credentials.";
+                    return "Invalid email or password.";
                 default:
-                    return "Something went wrong.";
+                    return "Authentication failed. Please try again.";
             }
         }
         throw error;

@@ -18,13 +18,15 @@ export default async function EditHoldingPage({ params }: EditHoldingPageProps) 
     let cities: any[];
     let types: any[];
     let hsnCodes: any[];
+    let vendors: any[];
 
     try {
-        [holding, cities, types, hsnCodes] = await Promise.all([
+        [holding, cities, types, hsnCodes, vendors] = await Promise.all([
             apiFetch<any>(`/api/holdings/${id}`),
             apiFetch<any[]>("/api/master-data/cities"),
             apiFetch<any[]>("/api/master-data/holding-types"),
             apiFetch<any[]>("/api/master-data/hsn-codes"),
+            apiFetch<any[]>("/api/accounting/vendors"),
         ]);
     } catch (error) {
         notFound();
@@ -47,6 +49,7 @@ export default async function EditHoldingPage({ params }: EditHoldingPageProps) 
                     cities={cities}
                     types={types}
                     hsnCodes={hsnCodes}
+                    vendors={vendors}
                 />
             </div>
         </div>

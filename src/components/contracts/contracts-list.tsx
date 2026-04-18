@@ -22,10 +22,10 @@ export function ContractsListClient({ contracts }: ContractsListClientProps) {
             data={contracts}
             emptyMessage="No ownership contracts found."
             filteredEmptyMessage="No contracts match your filters."
-            searchPlaceholder="Search by contract #, owner, or holding..."
+            searchPlaceholder="Search by contract #, vendor, or holding..."
             searchFields={[
                 { path: "contractNumber" },
-                { path: "ownerName" },
+                { path: "vendor.name" },
                 { path: "holding.code" },
                 { path: "holding.name" },
             ]}

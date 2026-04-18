@@ -12,6 +12,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 city: true,
                 holdingType: true,
                 hsnCode: true,
+                vendor: { 
+                    include: { city: true },
+                },
                 ownershipContracts: { orderBy: { startDate: "desc" } },
                 bookings: {
                     include: { client: true },
@@ -42,7 +45,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { id } = await params;
         const body = await request.json();
         const parsed = holdingSchema.parse(body);
-        const holding = await prisma.holding.update({ where: { id }, data: parsed });
+        const holding = await prisma.holding.update({
+            where: { id },
+            data: {
+                ...parsed,
+                vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
+            },
+        });
         return NextResponse.json(holding);
     } catch (error: any) {
         console.error("[PUT /api/holdings/[id]]", error);
