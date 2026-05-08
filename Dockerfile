@@ -62,6 +62,8 @@ RUN ./node_modules/.bin/tsx --version || npm install -g tsx
 #  ADD THIS: Copy prisma directory for migrations
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+
 # Copy public assets
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
