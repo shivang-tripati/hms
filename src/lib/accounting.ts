@@ -362,21 +362,32 @@ export async function createPaymentJournal(paymentId: string, tx: any = prisma) 
         include: {
             vendor: true,
             cashBankLedger: true,
+            liabilityLedger: true,
         },
     });
 
     if (!payment) throw new Error("Payment not found");
+    // Determine the debit ledger (either Vendor's AP or specific Liability ledger)
+    let debitLedgerId: string;
+    let descriptionPrefix: string;
 
-    const vendorLedger = await getOrCreateVendorLedger(payment.vendor, tx);
+    if (payment.paymentType === "OTHER_LIABILITY" && payment.liabilityLedgerId) {
+        debitLedgerId = payment.liabilityLedgerId;
+        descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.liabilityLedger?.name || 'Liability Account'}`;
+    } else {
+        const vendorLedger = await getOrCreateVendorLedger(payment.vendor, tx);
+        debitLedgerId = vendorLedger.id;
+        descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.vendor.name}`;
+    }
 
     const lines: JournalLineInput[] = [];
 
-    // Debit: Vendor's Accounts Payable
+    // Debit: Liability
     lines.push({
-        ledgerId: vendorLedger.id,
+        ledgerId: debitLedgerId,
         debit: Number(payment.amount),
         credit: null,
-        description: `Payment ${payment.paymentNumber} to ${payment.vendor.name}`,
+        description: descriptionPrefix,
     });
 
     // Credit: Cash/Bank account

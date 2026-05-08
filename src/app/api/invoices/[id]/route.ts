@@ -3,7 +3,11 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { invoiceUpsertPayloadSchema } from "@/lib/validations";
 import { buildPersistedLineItems, computeInvoiceHeaderTotals } from "@/lib/invoice-service";
-import { assertBookingsBelongToClient } from "@/app/api/invoices/_invoice-helpers";
+import { createInvoiceJournal } from "@/lib/accounting";
+import {
+    assertBookingsBelongToClient,
+    assertBookingsNotAlreadyBilled,
+} from "@/app/api/invoices/_invoice-helpers";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -36,6 +40,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const parsed = invoiceUpsertPayloadSchema.parse(body);
         const { items, ...rest } = parsed;
         const itemsProvided = Object.prototype.hasOwnProperty.call(body as object, "items");
+        const existingInvoice = await prisma.invoice.findUnique({
+            where: { id },
+            select: { status: true, journalEntryId: true },
+        });
+        if (!existingInvoice) {
+            return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+        if (existingInvoice.status === "SENT") {
+            return NextResponse.json(
+                { error: "Sent invoices are locked and cannot be edited" },
+                { status: 400 },
+            );
+        }
+        const bookingIdsToValidate = [
+            parsed.bookingId,
+            ...(items?.map((row) => row.bookingId).filter(Boolean) as string[]),
+        ];
+        await assertBookingsNotAlreadyBilled(prisma, bookingIdsToValidate, id);
 
         let invoice;
 
@@ -69,7 +91,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                         clientId: rest.clientId,
                         bookingId: rest.bookingId,
                         hsnCodeId: rest.hsnCodeId,
-                        items: { create: persistedLines },
+                        items: { createMany: { data: persistedLines } },
                     },
                     include: {
                         items: { include: { hsnCode: true } },
@@ -109,6 +131,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             });
         }
 
+        if (parsed.status === "SENT" && !existingInvoice.journalEntryId) {
+            try {
+                await createInvoiceJournal(id);
+            } catch (err) {
+                console.error("Failed to create invoice journal:", err);
+            }
+        }
+
         return NextResponse.json(invoice);
     } catch (error: any) {
         console.error("[PUT /api/invoices/[id]]", error);
@@ -128,7 +158,39 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const { id } = await params;
-        await prisma.invoice.delete({ where: { id } });
+        const invoice = await prisma.invoice.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                journalEntryId: true,
+                receipts: { select: { id: true, journalEntryId: true } },
+            },
+        });
+        if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+        await prisma.$transaction(async (tx) => {
+            const receiptJournalIds = invoice.receipts
+                .map((r) => r.journalEntryId)
+                .filter((v): v is string => Boolean(v));
+
+            if (invoice.receipts.length > 0) {
+                await tx.receipt.deleteMany({
+                    where: { id: { in: invoice.receipts.map((r) => r.id) } },
+                });
+            }
+
+            if (receiptJournalIds.length > 0) {
+                await tx.journalLine.deleteMany({ where: { journalId: { in: receiptJournalIds } } });
+                await tx.journalEntry.deleteMany({ where: { id: { in: receiptJournalIds } } });
+            }
+
+            if (invoice.journalEntryId) {
+                await tx.journalLine.deleteMany({ where: { journalId: invoice.journalEntryId } });
+                await tx.journalEntry.delete({ where: { id: invoice.journalEntryId } });
+            }
+
+            await tx.invoice.delete({ where: { id } });
+        });
         return new NextResponse(null, { status: 204 });
     } catch (error) {
         console.error("[DELETE /api/invoices/[id]]", error);

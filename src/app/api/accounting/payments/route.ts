@@ -11,6 +11,7 @@ export async function GET() {
             include: {
                 vendor: { select: { id: true, name: true } },
                 cashBankLedger: { select: { id: true, name: true } },
+                liabilityLedger: { select: { id: true, name: true } },
                 journalEntry: { select: { id: true, entryNumber: true, status: true } },
             },
         });

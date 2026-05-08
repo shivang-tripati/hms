@@ -26,11 +26,11 @@ export const BookingListColumns = [
     },
     {
         header: "Client",
-        cell: (row: any) => row.client?.name || "N/A",
+        cell: (row: any) => row.client ? <a href={`/clients/${row.client.id}`}>{row.client.name}</a> : "N/A",
     },
     {
         header: "Hoarding",
-        cell: (row: any) => row.holding?.name || "N/A",
+        cell: (row: any) => row.holding ? <a href={`/holdings/${row.holdingId}`}>{row.holding.name} - {row.holding.code}</a> : "N/A",
     },
     {
         header: "Total Mounting",

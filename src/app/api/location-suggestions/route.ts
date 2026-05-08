@@ -6,7 +6,7 @@ import { locationSuggestionSchema } from "@/lib/validations";
 export async function GET() {
     try {
         const suggestions = await prisma.locationSuggestion.findMany({
-            include: { city: true },
+            include: { city: true, photos: true },
             orderBy: { createdAt: "desc" }
         });
         return NextResponse.json(suggestions);
@@ -24,8 +24,21 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = locationSuggestionSchema.parse(body);
 
+        const { photos, ...rest } = parsed;
         const suggestion = await prisma.locationSuggestion.create({
-            data: parsed
+            data: {
+                ...rest,
+                photos: {
+                    create: (photos || []).map((p: any) => ({
+                        url: typeof p === "string" ? p : p.url,
+                        uploadedByUserName: session.user.name,
+                        uploadedById: session.user.id,
+                        latitude: typeof p === "object" ? p.latitude : parsed.latitude,
+                        longitude: typeof p === "object" ? p.longitude : parsed.longitude,
+                    }))
+                }
+            },
+            include: { photos: true }
         });
 
         return NextResponse.json(suggestion, { status: 201 });

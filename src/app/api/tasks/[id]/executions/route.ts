@@ -16,6 +16,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
         const parsed = taskExecutionSchema.parse(body);
 
+        const getMeta = (img: any, fallbackLat: number, fallbackLng: number) => {
+            if (typeof img === "object" && img !== null) {
+                return {
+                    url: img.url as string,
+                    latitude: img.latitude || fallbackLat,
+                    longitude: img.longitude || fallbackLng
+                };
+            }
+            return {
+                url: img as string,
+                latitude: fallbackLat,
+                longitude: fallbackLng
+            };
+        };
+
+        const frontMeta = getMeta(parsed.frontViewUrl, parsed.latitude, parsed.longitude);
+        const leftMeta = getMeta(parsed.leftViewUrl, parsed.latitude, parsed.longitude);
+        const rightMeta = getMeta(parsed.rightViewUrl, parsed.latitude, parsed.longitude);
+
         const result = await prisma.$transaction(async (tx) => {
             // 1. Fetch the task with all related data
             const task = await tx.task.findUnique({
@@ -48,9 +67,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     remarks: parsed.remarks,
                     latitude: parsed.latitude,
                     longitude: parsed.longitude,
-                    frontViewUrl: parsed.frontViewUrl,
-                    leftViewUrl: parsed.leftViewUrl,
-                    rightViewUrl: parsed.rightViewUrl,
+                    frontViewUrl: frontMeta.url,
+                    leftViewUrl: leftMeta.url,
+                    rightViewUrl: rightMeta.url,
+                    photos: {
+                        create: [
+                            { url: frontMeta.url, viewType: "FRONT", uploadedByUserName: session.user.name, uploadedById: session.user.id, latitude: frontMeta.latitude, longitude: frontMeta.longitude },
+                            { url: leftMeta.url, viewType: "LEFT", uploadedByUserName: session.user.name, uploadedById: session.user.id, latitude: leftMeta.latitude, longitude: leftMeta.longitude },
+                            { url: rightMeta.url, viewType: "RIGHT", uploadedByUserName: session.user.name, uploadedById: session.user.id, latitude: rightMeta.latitude, longitude: rightMeta.longitude },
+                        ].filter(p => p.url)
+                    }
                 },
             });
 

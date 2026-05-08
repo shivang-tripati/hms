@@ -29,7 +29,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const suggestion = await prisma.locationSuggestion.update({
             where: { id },
-            data: parsed,
+            data: {
+                address: parsed.address,
+                cityId: parsed.cityId,
+                latitude: parsed.latitude,
+                longitude: parsed.longitude,
+                status: parsed.status,
+
+                landmark: parsed.landmark,
+                description: parsed.description,
+                proposedRent: parsed.proposedRent,
+                ownerName: parsed.ownerName,
+                ownerPhone: parsed.ownerPhone,
+
+                // 🔥 THIS IS THE FIX
+                photos: parsed.photos
+                    ? {
+                        deleteMany: {}, // clear old
+                        create: parsed.photos.map((p) => ({
+                            url: p.url,
+                        })),
+                    }
+                    : undefined,
+            },
         });
 
         return NextResponse.json(suggestion);

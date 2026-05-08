@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -10,25 +10,103 @@ interface PrintInvoiceProps {
   invoiceId: string;
 }
 
+interface InvoicePrintData {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  subtotal: number | string;
+  cgstRate: number | string;
+  sgstRate: number | string;
+  igstRate: number | string;
+  cgstAmount: number | string;
+  sgstAmount: number | string;
+  igstAmount: number | string;
+  totalAmount: number | string;
+  client: {
+    name: string;
+    address?: string | null;
+    gstNumber?: string | null;
+    panNumber?: string | null;
+    city?: {
+      name?: string | null;
+      state?: string | null;
+    } | null;
+  };
+  booking: {
+    startDate: string;
+    endDate: string;
+    monthlyRate: number | string;
+    holding?: {
+      name?: string | null;
+      code?: string | null;
+      address?: string | null;
+      width?: number | string | null;
+      height?: number | string | null;
+      city?: {
+        name?: string | null;
+      } | null;
+      holdingType?: {
+        name?: string | null;
+      } | null;
+    } | null;
+  };
+  hsnCode?: {
+    code?: string | null;
+  } | null;
+  items?: Array<{
+    id: string;
+    description: string;
+    quantity: number | string;
+    rate: number | string;
+    amount: number | string;
+    total?: number | string;
+    hsnCode?: {
+      code?: string | null;
+    } | null;
+  }>;
+  settings?: {
+    companyName?: string | null;
+    tagline?: string | null;
+    logoUrl?: string | null;
+    address?: string | null;
+    state?: string | null;
+    gstNo?: string | null;
+    panNo?: string | null;
+    terms?: string[];
+    signatoryName?: string | null;
+    signatureUrl?: string | null;
+    footerAddress?: string | null;
+    website?: string | null;
+    phone?: string | null;
+    bankName?: string | null;
+    accountName?: string | null;
+    accountNumber?: string | null;
+    ifscCode?: string | null;
+    micrCode?: string | null;
+    branchCode?: string | null;
+    bankAddress?: string | null;
+  } | null;
+}
+
 export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
-  const [invoice, setInvoice] = useState<any>(null);
+  const [invoice, setInvoice] = useState<InvoicePrintData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch(`/api/invoices/${invoiceId}/print`);
         if (!res.ok) throw new Error("Failed to load invoice");
-        const data = await res.json();
+        const data = (await res.json()) as InvoicePrintData;
         setInvoice(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load invoice");
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, [invoiceId]);
 
@@ -38,7 +116,7 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -46,8 +124,8 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
 
   if (error || !invoice) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <p className="text-destructive font-medium">{error || "Invoice not found"}</p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <p className="font-medium text-destructive">{error || "Invoice not found"}</p>
         <Button variant="outline" asChild>
           <Link href="/billing">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -60,55 +138,164 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
 
   const holding = invoice.booking?.holding;
   const client = invoice.client;
-  const hsnCode = invoice.hsnCode;
   const booking = invoice.booking;
   const settings = invoice.settings || {};
   const lineItems = Array.isArray(invoice.items) ? invoice.items : [];
   const hasLineItems = lineItems.length > 0;
 
-  // Date formatting
-  const fmtDate = (d: string) => {
-    const date = new Date(d);
-    return date.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  // Calculate billing period in months
-  const startDate = new Date(booking.startDate);
-  const endDate = new Date(booking.endDate);
-  const diffMonths =
-    (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-    (endDate.getMonth() - startDate.getMonth()) +
-    1;
-  const durationLabel =
-    diffMonths === 1
-      ? "1 Month"
-      : diffMonths === 12
-        ? "1 Year"
-        : `${diffMonths} Months`;
-
-  const subtotal = Number(invoice.subtotal);
+  const subtotal = Number(invoice.subtotal || 0);
+  const cgstRate = Number(invoice.cgstRate || 0);
+  const sgstRate = Number(invoice.sgstRate || 0);
+  const igstRate = Number(invoice.igstRate || 0);
   const cgstAmount = Number(invoice.cgstAmount || 0);
   const sgstAmount = Number(invoice.sgstAmount || 0);
   const igstAmount = Number(invoice.igstAmount || 0);
-  const totalAmount = Number(invoice.totalAmount);
-  const gstRate = Number(invoice.cgstRate || 0) + Number(invoice.sgstRate || 0) + Number(invoice.igstRate || 0);
+  const totalAmount = Number(invoice.totalAmount || 0);
+  const gstRate = cgstRate + sgstRate + igstRate;
+
+  const companyState = settings.state;
+  const clientState = client?.city?.state;
+  const isInterState =
+    (companyState &&
+      clientState &&
+      companyState.toLowerCase() !== clientState.toLowerCase()) ||
+    igstRate > 0;
 
   const holdingSize = holding
-    ? `${Number(holding.width)}x${Number(holding.height)}`
-    : "—";
+    ? `${Number(holding.width || 0)} x ${Number(holding.height || 0)}`
+    : "-";
 
   const holdingAddress = holding
-    ? `${holding.name}${holding.address ? ", " + holding.address : ""}${holding.city ? ", " + holding.city.name : ""}`
-    : "—";
+    ? [
+        holding.name,
+        holding.address,
+        holding.city?.name,
+      ]
+        .filter(Boolean)
+        .join(", ")
+    : "-";
+
+  const billingStart = new Date(booking.startDate);
+  const billingEnd = new Date(booking.endDate);
+  const diffMonths =
+    (billingEnd.getFullYear() - billingStart.getFullYear()) * 12 +
+    (billingEnd.getMonth() - billingStart.getMonth()) +
+    1;
+  const durationLabel =
+    diffMonths === 1 ? "1 Month" : diffMonths === 12 ? "1 Year" : `${diffMonths} Months`;
 
   return (
     <>
-      {/* Action Bar — hidden on print */}
-      <div className="print:hidden flex items-center justify-between mb-6 bg-card border border-border/50 rounded-xl p-4 shadow-sm">
+      <style jsx global>{`
+        :root {
+          --invoice-border: #1f2937;
+          --invoice-muted: #6b7280;
+          --invoice-soft: #f4f4f5;
+        }
+
+        body {
+          background: #f5f5f5;
+        }
+
+        .invoice-print-shell {
+          max-width: 820px;
+          margin: 0 auto;
+        }
+
+        .invoice-paper {
+          width: 190mm;
+          margin: 0 auto;
+          background: #fff;
+          color: #000;
+          box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+          padding: 10mm 10mm 12mm;
+          box-sizing: border-box;
+          font-family: "Georgia", "Times New Roman", serif;
+          font-size: 10pt;
+          line-height: 1.35;
+        }
+
+        .invoice-paper *,
+        .invoice-paper *::before,
+        .invoice-paper *::after {
+          box-sizing: border-box;
+        }
+
+        .invoice-table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+        }
+
+        .invoice-table th,
+        .invoice-table td {
+          border: 1px solid var(--invoice-border);
+          padding: 7px 8px;
+          vertical-align: top;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+
+        .invoice-table thead th {
+          background: var(--invoice-soft);
+          font-size: 9pt;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        .invoice-terms li {
+          margin: 0 0 4px 0;
+        }
+
+        @media print {
+          @page {
+            size: A4;
+            margin: 8mm;
+          }
+
+          html,
+          body {
+            background: #fff !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+          }
+
+          .invoice-action-bar {
+            display: none !important;
+          }
+
+          .invoice-print-shell {
+            max-width: none;
+            margin: 0;
+          }
+
+          .invoice-paper {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+          }
+
+          .invoice-table thead {
+            display: table-header-group;
+          }
+
+          .invoice-table tfoot {
+            display: table-row-group;
+          }
+
+          .invoice-table tr,
+          .invoice-summary-box,
+          .invoice-meta-grid,
+          .invoice-party-grid,
+          .invoice-bottom-grid {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+        }
+      `}</style>
+
+      <div className="invoice-action-bar mb-6 flex items-center justify-between rounded-xl border border-border/50 bg-card p-4 shadow-sm">
         <Button variant="ghost" asChild>
           <Link href={`/billing/invoices/${invoiceId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -121,447 +308,395 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
         </Button>
       </div>
 
-      {/* ─── Printable Invoice ─────────────────────────────────────────── */}
-      <div
-        ref={printRef}
-        className="print-invoice-container bg-white text-black mx-auto"
-        style={{
-          width: "210mm",
-          minHeight: "297mm",
-          padding: "12mm 15mm",
-          fontFamily: "'Inter', 'Segoe UI', Arial, sans-serif",
-          fontSize: "11pt",
-          lineHeight: "1.4",
-        }}
-      >
-        {/* ─── Header ─── */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6mm" }}>
-          <div>
-            <h1 style={{ fontSize: "20pt", fontWeight: 800, color: "#1a1a2e", margin: 0 }}>
-              {settings.companyName || "Supreme Media Advertising"}
-            </h1>
-            <p style={{ fontSize: "9pt", color: "#555", margin: "2mm 0 0 0", letterSpacing: "1.5px" }}>
-              {settings.tagline || "Creative • Innovative • Positive"}
-            </p>
-          </div>
-        </div>
-
-        {/* ─── Tax Invoice Title ─── */}
-        <div
-          style={{
-            textAlign: "center",
-            background: "#f0f0f5",
-            padding: "3mm 0",
-            border: "1px solid #ccc",
-            marginBottom: "4mm",
-            fontWeight: 700,
-            fontSize: "13pt",
-            letterSpacing: "1px",
-          }}
-        >
-          Tax Invoice
-        </div>
-
-        {/* ─── Invoice Number & Date Row ─── */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            border: "1px solid #ccc",
-            borderBottom: "none",
-            padding: "2.5mm 4mm",
-            fontSize: "10pt",
-          }}
-        >
-          <div>
-            <strong>Invoice No.</strong> {invoice.invoiceNumber}
-          </div>
-          <div>
-            <strong>Date:</strong> {fmtDate(invoice.invoiceDate)}
-          </div>
-        </div>
-
-        {/* ─── Billed To / Issued By ─── */}
-        <div
-          style={{
-            display: "flex",
-            border: "1px solid #ccc",
-            marginBottom: "5mm",
-          }}
-        >
-          {/* Billed To */}
-          <div
+      <div className="invoice-print-shell">
+        <div className="invoice-paper">
+          <header
             style={{
-              flex: 1,
-              padding: "3mm 4mm",
-              borderRight: "1px solid #ccc",
+              display: "grid",
+              gridTemplateColumns: settings.logoUrl ? "1fr auto" : "1fr",
+              alignItems: "start",
+              gap: "12px",
+              borderBottom: "2px solid var(--invoice-border)",
+              paddingBottom: "10px",
+              marginBottom: "12px",
             }}
           >
-            <p style={{ fontWeight: 700, fontSize: "9pt", color: "#555", marginBottom: "1mm" }}>
-              To :
-            </p>
-            <p style={{ fontWeight: 700, fontSize: "11pt" }}>{client.name}</p>
-            <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
-              {client.address}
-            </p>
-            {client.city && (
-              <p style={{ fontSize: "9.5pt", color: "#333" }}>
-                {client.city.name}, {client.city.state}
-              </p>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "24pt", fontWeight: 700, lineHeight: 1.1 }}>
+                {settings.companyName || "Supreme Media Advertising"}
+              </h1>
+              {settings.tagline && (
+                <p
+                  style={{
+                    margin: "4px 0 0 0",
+                    color: "var(--invoice-muted)",
+                    fontSize: "9pt",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {settings.tagline}
+                </p>
+              )}
+              <div style={{ marginTop: "8px", fontSize: "9pt", color: "#111827" }}>
+                {settings.address && <div>{settings.address}</div>}
+                <div>
+                  {settings.gstNo && <span>GSTIN: {settings.gstNo}</span>}
+                  {settings.gstNo && settings.panNo && <span> | </span>}
+                  {settings.panNo && <span>PAN: {settings.panNo}</span>}
+                </div>
+              </div>
+            </div>
+            {settings.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.logoUrl}
+                alt="Company logo"
+                style={{ maxWidth: "48mm", maxHeight: "18mm", objectFit: "contain" }}
+              />
             )}
-            {client.gstNumber && (
-              <p style={{ fontSize: "9.5pt", marginTop: "1.5mm" }}>
-                <strong>GSTIN No:</strong> {client.gstNumber}
-              </p>
-            )}
-            {client.panNumber && (
-              <p style={{ fontSize: "9.5pt" }}>
-                <strong>PAN No:</strong> {client.panNumber}
-              </p>
-            )}
+          </header>
+
+          <div
+            style={{
+              border: "1.5px solid var(--invoice-border)",
+              textAlign: "center",
+              padding: "7px 10px",
+              marginBottom: "12px",
+              fontSize: "13pt",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+            }}
+          >
+            TAX INVOICE
           </div>
 
-          {/* Issued By */}
-          <div style={{ flex: 1, padding: "3mm 4mm" }}>
-            <p style={{ fontWeight: 700, fontSize: "9pt", color: "#555", marginBottom: "1mm" }}>
-              Issued By :
-            </p>
-            <p style={{ fontWeight: 700, fontSize: "11pt" }}>
-              {settings.companyName || "Supreme Media Advertising"}
-            </p>
-            {settings.gstNo && (
-              <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
-                GST No.: {settings.gstNo}
-              </p>
-            )}
-            {settings.panNo && (
-              <p style={{ fontSize: "9.5pt", color: "#333" }}>
-                PAN No.: {settings.panNo}
-              </p>
-            )}
-            <p style={{ fontSize: "9.5pt", color: "#333", margin: "1mm 0" }}>
-              {settings.address || "Post Office Chowmuhani, Agartala, Tripura (W)"}
-            </p>
+          <section
+            className="invoice-meta-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              border: "1px solid var(--invoice-border)",
+              marginBottom: "12px",
+            }}
+          >
+            <MetaCell label="Invoice No." value={invoice.invoiceNumber} bordered />
+            <MetaCell label="Invoice Date" value={fmtDate(invoice.invoiceDate)} bordered />
+            <MetaCell label="Due Date" value={fmtDate(invoice.dueDate)} bordered />
+            <MetaCell label="Billing Period" value={`${fmtDate(booking.startDate)} to ${fmtDate(booking.endDate)}`} />
+          </section>
+
+          <section
+            className="invoice-party-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              border: "1px solid var(--invoice-border)",
+              marginBottom: "12px",
+            }}
+          >
+            <div style={{ padding: "10px", borderRight: "1px solid var(--invoice-border)" }}>
+              <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)", marginBottom: "6px" }}>
+                BILLED TO
+              </div>
+              <div style={{ fontSize: "11pt", fontWeight: 700, marginBottom: "6px" }}>{client.name}</div>
+              {client.address && <div style={{ marginBottom: "4px" }}>{client.address}</div>}
+              {(client.city?.name || client.city?.state) && (
+                <div style={{ marginBottom: "4px" }}>
+                  {[client.city?.name, client.city?.state].filter(Boolean).join(", ")}
+                </div>
+              )}
+              {client.gstNumber && <div>GSTIN: {client.gstNumber}</div>}
+              {client.panNumber && <div>PAN: {client.panNumber}</div>}
+            </div>
+            <div style={{ padding: "10px" }}>
+              <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)", marginBottom: "6px" }}>
+                SITE / BOOKING DETAILS
+              </div>
+              <div style={{ marginBottom: "4px" }}>
+                <strong>Holding:</strong> {holding?.name || "-"}
+              </div>
+              <div style={{ marginBottom: "4px" }}>
+                <strong>Code:</strong> {holding?.code || "-"}
+              </div>
+              <div style={{ marginBottom: "4px" }}>
+                <strong>Size:</strong> {holdingSize}
+                {holding?.holdingType?.name ? ` (${holding.holdingType.name})` : ""}
+              </div>
+              <div>
+                <strong>Location:</strong> {holdingAddress}
+              </div>
+            </div>
+          </section>
+
+          <div
+            style={{
+              marginBottom: "10px",
+              padding: "8px 10px",
+              border: "1px solid #d1d5db",
+              background: "#fafafa",
+              fontSize: "9.5pt",
+            }}
+          >
+            <strong>Bill Period:</strong> {durationLabel} ({fmtDate(booking.startDate)} to {fmtDate(booking.endDate)})
           </div>
-        </div>
 
-        {/* ─── Bill Period ─── */}
-        <div
-          style={{
-            textAlign: "center",
-            fontWeight: 700,
-            fontSize: "11pt",
-            padding: "2mm 0",
-            marginBottom: "3mm",
-          }}
-        >
-          Bill Period: {durationLabel} ({fmtDate(booking.startDate)} to{" "}
-          {fmtDate(booking.endDate)})
-        </div>
+          <table className="invoice-table" style={{ marginBottom: "12px" }}>
+            <thead>
+              <tr>
+                <th style={{ width: "32%" }}>Description / Location</th>
+                <th style={{ width: "11%" }}>SAC</th>
+                <th style={{ width: "12%" }}>Size / Type</th>
+                <th style={{ width: "11%" }}>Qty</th>
+                <th style={{ width: "12%" }}>Rate</th>
+                <th style={{ width: "10%" }}>{isInterState ? `IGST ${igstRate}%` : `GST ${gstRate}%`}</th>
+                <th style={{ width: "12%" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hasLineItems ? (
+                lineItems.map((row, index) => {
+                  const amount = Number(row.amount || 0);
+                  const rowGst = isInterState
+                    ? (amount * igstRate) / 100
+                    : (amount * gstRate) / 100;
+                  const rowTotal = Number(row.total ?? amount + rowGst);
 
-        {/* ─── Line Items Table ─── */}
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            border: "1px solid #ccc",
-            marginBottom: "2mm",
-            fontSize: "10pt",
-          }}
-        >
-          <thead>
-            <tr style={{ backgroundColor: "#f5f5fa" }}>
-              <th
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "2.5mm 3mm",
-                  textAlign: "left",
-                  fontWeight: 700,
-                }}
-              >
-                Location Of the Hoardings
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "center", fontWeight: 700 }}>
-                SAC Code
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "center", fontWeight: 700 }}>
-                Size / Type
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "center", fontWeight: 700 }}>
-                Rate / Month
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "center", fontWeight: 700 }}>
-                Duration
-              </th>
-              <th colSpan={2} style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "center", fontWeight: 700 }}>
-                GST @{gstRate}%
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2.5mm 3mm", textAlign: "right", fontWeight: 700 }}>
-                Total Amount (Rs.)
-              </th>
-            </tr>
-            <tr style={{ backgroundColor: "#f5f5fa" }}>
-              <th colSpan={5} style={{ border: "1px solid #ccc", padding: 0 }}></th>
-              <th style={{ border: "1px solid #ccc", padding: "2mm 3mm", textAlign: "center", fontWeight: 600, fontSize: "9pt" }}>
-                CGST
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: "2mm 3mm", textAlign: "center", fontWeight: 600, fontSize: "9pt" }}>
-                SGST
-              </th>
-              <th style={{ border: "1px solid #ccc", padding: 0 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {hasLineItems ? (
-              lineItems.map((row: any) => (
-                <tr key={row.id}>
-                  <td
-                    style={{
-                      border: "1px solid #ccc",
-                      padding: "3mm",
-                      verticalAlign: "top",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{row.description}</div>
-                    {row.hsnCode?.code && (
-                      <div style={{ fontSize: "9pt", color: "#555", marginTop: "1mm" }}>
-                        HSN/SAC: {row.hsnCode.code}
+                  return (
+                    <tr key={row.id}>
+                      <td>
+                        <div style={{ fontWeight: 700 }}>{row.description}</div>
+                        {index === 0 && holdingAddress !== "-" && (
+                          <div style={{ marginTop: "4px", fontSize: "8.5pt", color: "var(--invoice-muted)" }}>
+                            {holdingAddress}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "center" }}>{row.hsnCode?.code || invoice.hsnCode?.code || "-"}</td>
+                      <td style={{ textAlign: "center" }}>{holdingSize}</td>
+                      <td style={{ textAlign: "center" }}>{Number(row.quantity || 0).toLocaleString("en-IN")}</td>
+                      <td style={{ textAlign: "right" }}>{formatINR(Number(row.rate || 0))}</td>
+                      <td style={{ textAlign: "right" }}>{formatINR(rowGst)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700 }}>{formatINR(rowTotal)}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td>
+                    <div style={{ fontWeight: 700 }}>{holding?.name || "-"}</div>
+                    {holdingAddress !== "-" && (
+                      <div style={{ marginTop: "4px", fontSize: "8.5pt", color: "var(--invoice-muted)" }}>
+                        {holdingAddress}
                       </div>
                     )}
                   </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    {row.hsnCode?.code || "—"}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    —
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    {formatINR(Number(row.rate))}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    {Number(row.quantity).toLocaleString("en-IN")}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    {formatINR((Number(row.amount) * Number(invoice.cgstRate || 0)) / 100)}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                    {formatINR((Number(row.amount) * Number(invoice.sgstRate || 0)) / 100)}
-                  </td>
-                  <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "right", fontWeight: 600 }}>
-                    {formatINR(Number(row.amount))}
-                  </td>
+                  <td style={{ textAlign: "center" }}>{invoice.hsnCode?.code || "-"}</td>
+                  <td style={{ textAlign: "center" }}>{holdingSize}</td>
+                  <td style={{ textAlign: "center" }}>{durationLabel}</td>
+                  <td style={{ textAlign: "right" }}>{formatINR(Number(booking.monthlyRate || 0))}</td>
+                  <td style={{ textAlign: "right" }}>{formatINR(isInterState ? igstAmount : cgstAmount + sgstAmount)}</td>
+                  <td style={{ textAlign: "right", fontWeight: 700 }}>{formatINR(totalAmount)}</td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  style={{
-                    border: "1px solid #ccc",
-                    padding: "3mm",
-                    verticalAlign: "top",
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}>
-                    {holding?.name || "—"}
-                  </div>
-                  <div style={{ fontSize: "9pt", color: "#555", marginTop: "1mm" }}>
-                    {holdingAddress}
-                  </div>
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {hsnCode?.code || "—"}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {holdingSize}
-                  {holding?.holdingType?.name ? ` (${holding.holdingType.name})` : ""}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {formatINR(Number(booking.monthlyRate))}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {durationLabel}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {formatINR(cgstAmount)}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "center" }}>
-                  {formatINR(sgstAmount)}
-                </td>
-                <td style={{ border: "1px solid #ccc", padding: "3mm", textAlign: "right", fontWeight: 600 }}>
-                  {formatINR(subtotal)}
-                </td>
-              </tr>
-            )}
-          </tbody>
-          <tfoot>
-            <tr style={{ backgroundColor: "#f5f5fa" }}>
-              <td
-                colSpan={5}
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "3mm",
-                  fontWeight: 700,
-                  fontSize: "9.5pt",
-                  color: "#c0392b",
-                }}
-              >
-                {amountToWords(totalAmount)}
-              </td>
-              <td
-                colSpan={2}
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "3mm",
-                  fontWeight: 700,
-                  textAlign: "right",
-                }}
-              >
-                Total
-              </td>
-              <td
-                style={{
-                  border: "1px solid #ccc",
-                  padding: "3mm",
-                  fontWeight: 700,
-                  textAlign: "right",
-                  fontSize: "11pt",
-                }}
-              >
-                {formatINR(totalAmount)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+              )}
+            </tbody>
+          </table>
 
-        {/* ─── Terms & Conditions + Authorized Signatory ─── */}
-        <div
-          style={{
-            display: "flex",
-            border: "1px solid #ccc",
-            marginTop: "5mm",
-            marginBottom: "5mm",
-          }}
-        >
-          {/* Terms */}
-          <div
+          <section
             style={{
-              flex: 1.2,
-              padding: "3mm 4mm",
-              borderRight: "1px solid #ccc",
-              fontSize: "9pt",
+              display: "grid",
+              gridTemplateColumns: "1fr 70mm",
+              gap: "12px",
+              alignItems: "start",
+              marginBottom: "12px",
             }}
           >
-            <p style={{ fontWeight: 700, marginBottom: "2mm", fontSize: "10pt" }}>
-              Terms & Conditions:
-            </p>
-            <ol style={{ margin: 0, paddingLeft: "4mm", lineHeight: 1.6 }}>
-              {settings.terms && settings.terms.length > 0 ? (
-                settings.terms.map((term: string, index: number) => (
-                  <li key={index}>{term}</li>
-                ))
+            <div
+              style={{
+                border: "1px solid #d1d5db",
+                padding: "10px",
+                minHeight: "100%",
+              }}
+            >
+              <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)", marginBottom: "6px" }}>
+                Amount in Words
+              </div>
+              <div style={{ fontWeight: 700 }}>{amountToWords(totalAmount)}</div>
+            </div>
+
+            <div className="invoice-summary-box" style={{ border: "1px solid var(--invoice-border)" }}>
+              <SummaryRow label="Taxable Value" value={formatINR(subtotal)} />
+              {isInterState ? (
+                <SummaryRow label={`IGST (${igstRate}%)`} value={formatINR(igstAmount)} />
               ) : (
                 <>
-                  <li>Space once sold will not be taken back.</li>
-                  <li>
-                    Flex Mounting charges will be free 4 times in a year.
-                    After that, Rs. 3/- will be charged for every mounting.
-                  </li>
-                  <li>Subject to local jurisdiction only.</li>
-                  <li>Payment should be made within 5 days of the bill&apos;s issue.</li>
-                  <li>Any disputes should be resolved amicably.</li>
+                  <SummaryRow label={`CGST (${cgstRate}%)`} value={formatINR(cgstAmount)} />
+                  <SummaryRow label={`SGST (${sgstRate}%)`} value={formatINR(sgstAmount)} />
                 </>
               )}
-            </ol>
-          </div>
+              <SummaryRow label="Grand Total" value={formatINR(totalAmount)} strong />
+            </div>
+          </section>
 
-          {/* Authorized Signatory */}
-          <div
+          <section
+            className="invoice-bottom-grid"
             style={{
-              flex: 0.8,
-              padding: "3mm 4mm",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              alignItems: "center",
-              textAlign: "center",
+              display: "grid",
+              gridTemplateColumns: "1.2fr 0.8fr",
+              gap: "12px",
+              marginBottom: "12px",
             }}
           >
-            <p style={{ fontSize: "10pt", fontWeight: 600 }}>
-              {settings.signatoryName || "Supreme Media Advertising"}
-            </p>
-            <div style={{ marginTop: "12mm", marginBottom: "2mm" }}>
-              {settings.signatureUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img 
-                  src={settings.signatureUrl} 
-                  alt="Signature" 
-                  style={{ maxHeight: "15mm", maxWidth: "40mm", marginBottom: "2mm", objectFit: "contain" }} 
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "30mm",
-                    height: "0.5mm",
-                    backgroundColor: "#333",
-                    margin: "0 auto",
-                  }}
-                ></div>
-              )}
-              <p style={{ fontSize: "9pt", fontWeight: 600, marginTop: "1mm" }}>
-                Authorized Signatory
-              </p>
+            <div style={{ border: "1px solid var(--invoice-border)", padding: "10px" }}>
+              <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)", marginBottom: "6px" }}>
+                Terms & Conditions
+              </div>
+              <ol className="invoice-terms" style={{ margin: 0, paddingLeft: "18px" }}>
+                {settings.terms && settings.terms.length > 0 ? (
+                  settings.terms.map((term, index) => <li key={index}>{term}</li>)
+                ) : (
+                  <>
+                    <li>Space once sold will not be taken back.</li>
+                    <li>Mounting charges, if applicable, will be billed as per agreement.</li>
+                    <li>Payment should be made within the due date mentioned in the invoice.</li>
+                    <li>Subject to local jurisdiction only.</li>
+                  </>
+                )}
+              </ol>
             </div>
-          </div>
-        </div>
 
-        {/* ─── Bank Details ─── */}
-        <div
-          style={{
-            fontSize: "9pt",
-            padding: "3mm 0",
-            borderTop: "1px solid #ddd",
-            lineHeight: 1.7,
-          }}
-        >
-          <p style={{ fontWeight: 700, marginBottom: "1mm" }}>
-            &ldquo;{settings.companyName || "Supreme Media Advertising"}&rdquo;
-          </p>
-          <p>Bank account details are given below:</p>
-          <p>Bank: {settings.bankName || "State Bank Of India (SBI)"}</p>
-          <p>Account holder name: {settings.accountName || "SUPREME MEDIA ADVERTISING"}</p>
-          <p>Account Number: {settings.accountNumber || "36369322514"}</p>
-          <p>IFSC CODE: {settings.ifscCode || "SBIN0009126"}</p>
-          <p>MICR CODE: {settings.micrCode || "799002007"}</p>
-          <p>BRANCH CODE: {settings.branchCode || "09126"}</p>
-          <p style={{ fontWeight: 600 }}>
-            {settings.bankAddress || "SBI MBB COLLEGE BRANCH, MATH CHOWMUHANI, AGARTALA, TRIPURA (W) PIN-799007"}
-          </p>
-        </div>
+            <div
+              style={{
+                border: "1px solid var(--invoice-border)",
+                padding: "10px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                minHeight: "120px",
+              }}
+            >
+              <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)" }}>
+                For {settings.companyName || "Supreme Media Advertising"}
+              </div>
+              <div style={{ textAlign: "center", paddingTop: "20px" }}>
+                {settings.signatureUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={settings.signatureUrl}
+                    alt="Signature"
+                    style={{ maxHeight: "18mm", maxWidth: "42mm", objectFit: "contain", margin: "0 auto 6px" }}
+                  />
+                ) : (
+                  <div style={{ height: "18mm" }} />
+                )}
+                <div style={{ borderTop: "1px solid var(--invoice-border)", paddingTop: "6px", fontWeight: 700 }}>
+                  {settings.signatoryName || "Authorized Signatory"}
+                </div>
+              </div>
+            </div>
+          </section>
 
-        {/* ─── Footer ─── */}
-        <div
-          style={{
-            borderTop: "2px solid #1a1a2e",
-            paddingTop: "3mm",
-            marginTop: "4mm",
-            textAlign: "center",
-            fontSize: "8.5pt",
-            color: "#555",
-            lineHeight: 1.6,
-          }}
-        >
-          <p>
-            {settings.footerAddress || "Agartala Office: 45 HGB Road, Post Office Chowmuhani, Opp to Sarkar Nursing Home, Singh Para, Rimpon International Building 3rd Floor, Upstairs Of Times 24 Network, Agartala, Tripura (W) PIN: 799001"}
-          </p>
-          <p style={{ marginTop: "1mm" }}>
-            {settings.website && <strong>{settings.website}</strong>}
-            {settings.website && settings.phone && <span> &nbsp;&bull;&nbsp; </span>}
-            {settings.phone && <strong>{settings.phone}</strong>}
-          </p>
+          <section style={{ border: "1px solid #d1d5db", padding: "10px", marginBottom: "10px" }}>
+            <div style={{ fontSize: "8.5pt", fontWeight: 700, color: "var(--invoice-muted)", marginBottom: "6px" }}>
+              Bank Details
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px", fontSize: "9pt" }}>
+              <div><strong>Bank:</strong> {settings.bankName || "State Bank Of India (SBI)"}</div>
+              <div><strong>Account Name:</strong> {settings.accountName || "SUPREME MEDIA ADVERTISING"}</div>
+              <div><strong>Account No:</strong> {settings.accountNumber || "36369322514"}</div>
+              <div><strong>IFSC:</strong> {settings.ifscCode || "SBIN0009126"}</div>
+              <div><strong>MICR:</strong> {settings.micrCode || "-"}</div>
+              <div><strong>Branch Code:</strong> {settings.branchCode || "-"}</div>
+            </div>
+            {settings.bankAddress && (
+              <div style={{ marginTop: "6px", fontSize: "9pt" }}>
+                <strong>Branch Address:</strong> {settings.bankAddress}
+              </div>
+            )}
+          </section>
+
+          <footer
+            style={{
+              borderTop: "1.5px solid var(--invoice-border)",
+              paddingTop: "8px",
+              textAlign: "center",
+              fontSize: "8.5pt",
+              color: "#374151",
+            }}
+          >
+            {settings.footerAddress || settings.address ? (
+              <div>{settings.footerAddress || settings.address}</div>
+            ) : null}
+            {(settings.website || settings.phone) && (
+              <div style={{ marginTop: "3px" }}>
+                {[settings.website, settings.phone].filter(Boolean).join(" | ")}
+              </div>
+            )}
+          </footer>
         </div>
       </div>
     </>
   );
+}
+
+function MetaCell({
+  label,
+  value,
+  bordered = false,
+}: {
+  label: string;
+  value: string;
+  bordered?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        padding: "8px 10px",
+        borderRight: bordered ? "1px solid var(--invoice-border)" : undefined,
+      }}
+    >
+      <div style={{ fontSize: "8pt", fontWeight: 700, color: "var(--invoice-muted)", textTransform: "uppercase", marginBottom: "3px" }}>
+        {label}
+      </div>
+      <div style={{ fontWeight: 700 }}>{value}</div>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "12px",
+        padding: "8px 10px",
+        borderBottom: strong ? undefined : "1px solid #d1d5db",
+        fontWeight: strong ? 700 : 500,
+        background: strong ? "#f4f4f5" : undefined,
+      }}
+    >
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
+function fmtDate(d: string): string {
+  const date = new Date(d);
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function formatINR(n: number): string {

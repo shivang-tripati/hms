@@ -7,28 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate, formatEnum } from "@/lib/utils";
 import {
-    ClipboardList,
-    Calendar,
-    User,
-    MapPin,
-    Banknote,
-    Pencil,
-    CheckCircle,
-    Megaphone,
-    Clock,
-    Play,
-    FileText,
-    Users,
+    ClipboardList, Calendar, User, MapPin, Banknote, Pencil, CheckCircle,
+    Megaphone, Clock, Play, FileText, Users, Lock, AlertTriangle, Zap, ShieldCheck, Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
-import { auth } from "@/auth";
 import { TaskReviewActions } from "@/components/tasks/task-review-actions";
+import { PhotoGallery } from "@/components/shared/photo-gallery";
+import { auth } from "@/auth";
+
+const LOCKED_STATUSES = ["UNDER_REVIEW", "COMPLETED"];
 
 interface TaskDetailsPageProps {
-    params: {
-        id: string;
-    };
+    params: { id: string };
 }
 
 export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) {
@@ -42,13 +33,14 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
     } catch (error) {
         notFound();
     }
+    if (!task) notFound();
 
-    if (!task) {
-        notFound();
-    }
     const canComplete = role === "STAFF" && (task.status === "PENDING" || task.status === "IN_PROGRESS");
     const needsReview = role === "ADMIN" && task.status === "UNDER_REVIEW";
     const isBookingLinked = task.taskType === "INSTALLATION" || task.taskType === "MOUNTING";
+    const isLocked = LOCKED_STATUSES.includes(task.status);
+    const isAdmin = role === "ADMIN";
+    const canEdit = isAdmin && !isLocked;
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -60,9 +52,14 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={task.status} />
+                    {isLocked && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md">
+                            <Lock className="h-3 w-3" /> Locked
+                        </span>
+                    )}
                     {needsReview ? (
                         <TaskReviewActions taskId={id} />
-                    ) : role === "ADMIN" ? (
+                    ) : canEdit ? (
                         <Button asChild variant="outline" size="sm">
                             <Link href={`/tasks/${id}/edit`}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit
@@ -79,7 +76,6 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-
                 {/* Main Task Info */}
                 <Card className="md:col-span-2">
                     <CardHeader>
@@ -120,37 +116,39 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                     </CardContent>
                 </Card>
 
-                {/* Financial Context */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Banknote className="h-4 w-4" /> Cost Details
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                        <div className="bg-muted p-4 rounded-md space-y-3">
-                            <div>
-                                <p className="text-muted-foreground mb-1">Estimated Cost</p>
-                                <p className="font-bold text-lg">
-                                    {task.estimatedCost ? formatCurrency(task.estimatedCost) : "N/A"}
-                                </p>
+                {/* Financial Context — ADMIN ONLY */}
+                {isAdmin && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Banknote className="h-4 w-4" /> Cost Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm">
+                            <div className="bg-muted p-4 rounded-md space-y-3">
+                                <div>
+                                    <p className="text-muted-foreground mb-1">Estimated Cost</p>
+                                    <p className="font-bold text-lg">
+                                        {task.estimatedCost ? formatCurrency(task.estimatedCost) : "N/A"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-muted-foreground mb-1">Actual Cost</p>
+                                    <p className="font-bold text-lg text-emerald-600">
+                                        {task.actualCost ? formatCurrency(task.actualCost) : "N/A"}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-muted-foreground mb-1">Actual Cost</p>
-                                <p className="font-bold text-lg text-emerald-600">
-                                    {task.actualCost ? formatCurrency(task.actualCost) : "N/A"}
-                                </p>
+                            <div className="text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/10 p-3 rounded-md">
+                                <p className="font-medium mb-1">Internal Notes</p>
+                                <p>{task.notes || "No internal notes."}</p>
                             </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground bg-amber-500/5 border border-amber-500/10 p-3 rounded-md">
-                            <p className="font-medium mb-1">Internal Notes</p>
-                            <p>{task.notes || "No internal notes."}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Linked Entities */}
-                <div className="md:col-span-3 space-y-6">
+                <div className={isAdmin ? "md:col-span-3 space-y-6" : "md:col-span-1 space-y-6"}>
                     {task.executions && task.executions.length > 0 && (
                         <Card className="border-indigo-500/20 shadow-md">
                             <CardHeader className="bg-indigo-500/5 border-b border-indigo-500/10">
@@ -164,9 +162,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                         <div className="grid md:grid-cols-3 gap-6">
                                             <div className="space-y-1">
                                                 <p className="text-xs font-semibold text-muted-foreground uppercase">Condition Reported</p>
-                                                <div className="flex items-center gap-2">
-                                                    <StatusBadge status={exec.condition} />
-                                                </div>
+                                                <StatusBadge status={exec.condition} />
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-xs font-semibold text-muted-foreground uppercase">Performed By</p>
@@ -180,42 +176,31 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                                 </div>
                                             </div>
                                         </div>
-
+                                        {task.taskType === "INSPECTION" && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div className={`flex items-center gap-2 p-2 rounded-md border ${exec.illuminationOk ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                                    <Zap className="h-4 w-4" />
+                                                    <span className="text-xs font-semibold">Illumination: {exec.illuminationOk ? 'OK' : 'FAIL'}</span>
+                                                </div>
+                                                <div className={`flex items-center gap-2 p-2 rounded-md border ${exec.structureOk ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                                    <ShieldCheck className="h-4 w-4" />
+                                                    <span className="text-xs font-semibold">Structure: {exec.structureOk ? 'OK' : 'FAIL'}</span>
+                                                </div>
+                                                <div className={`flex items-center gap-2 p-2 rounded-md border ${exec.visibilityOk ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-red-50 border-red-100 text-red-700'}`}>
+                                                    <Eye className="h-4 w-4" />
+                                                    <span className="text-xs font-semibold">Visibility: {exec.visibilityOk ? 'OK' : 'FAIL'}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <p className="text-xs font-semibold text-muted-foreground uppercase">Remarks</p>
-                                            <p className="text-sm bg-slate-50 p-3 rounded-md border border-slate-100 italic">
+                                            <p className="text-sm bg-slate-50 p-3 rounded-md border border-slate-100 italic dark:bg-slate-700 dark:border-slate-700 dark:text-slate-300">
                                                 &quot;{exec.remarks || "No remarks provided."}&quot;
                                             </p>
                                         </div>
-
                                         <div className="space-y-3">
                                             <p className="text-xs font-semibold text-muted-foreground uppercase">Photos</p>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                {[
-                                                    { label: "Front View", url: exec.frontViewUrl },
-                                                    { label: "Left View", url: exec.leftViewUrl },
-                                                    { label: "Right View", url: exec.rightViewUrl },
-                                                ].map((photo, idx) => (
-                                                    <div key={idx} className="space-y-1.5">
-                                                        <div className="aspect-video rounded-lg overflow-hidden border bg-muted">
-                                                            {photo.url ? (
-                                                                <a href={photo.url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                                                                    <img
-                                                                        src={photo.url}
-                                                                        alt={photo.label}
-                                                                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
-                                                                    />
-                                                                </a>
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                                                    No photo
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <p className="text-[10px] text-center font-medium text-muted-foreground">{photo.label}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <PhotoGallery photos={exec.photos} />
                                         </div>
                                     </div>
                                 ))}
@@ -228,7 +213,6 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                             <CardTitle className="text-base">Related Context</CardTitle>
                         </CardHeader>
                         <CardContent className="grid md:grid-cols-2 gap-6">
-                            {/* Booking info (for INSTALLATION/MOUNTING) */}
                             {isBookingLinked && task.booking && (
                                 <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
                                     <div className="bg-emerald-500/10 p-2 rounded-md">
@@ -248,16 +232,17 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                         <div className="flex items-center gap-2 mt-2">
                                             <StatusBadge status={task.booking.status} />
                                         </div>
-                                        <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
-                                            <Link href={`/bookings/${task.booking.id}`}>View Booking</Link>
-                                        </Button>
+                                        {isAdmin && (
+                                            <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
+                                                <Link href={`/bookings/${task.booking.id}`}>View Booking</Link>
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Holding info (for MAINTENANCE/INSPECTION or when available) */}
                             {task.holding && (
-                                <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+                                <div className="flex items-start gap-4 p-4  bg-card hover:shadow-sm transition-shadow">
                                     <div className="bg-primary/10 p-2 rounded-md">
                                         <MapPin className="h-5 w-5 text-primary" />
                                     </div>
@@ -272,7 +257,6 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                                 </div>
                             )}
 
-                            {/* Advertisement info */}
                             {task.advertisement && (
                                 <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
                                     <div className="bg-indigo-500/10 p-2 rounded-md">

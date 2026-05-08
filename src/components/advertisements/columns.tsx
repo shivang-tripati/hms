@@ -46,6 +46,10 @@ export const AdvertisementListColumns = [
         cell: (row: any) => row.installationDate ? formatDate(row.installationDate) : "Pending",
     },
     {
+        header: "Removal Date",
+        cell: (row: any) => row.removalDate ? formatDate(row.removalDate) : "Open",
+    },
+    {
         header: "Status",
         cell: (row: any) => <StatusBadge status={row.status} />,
     },

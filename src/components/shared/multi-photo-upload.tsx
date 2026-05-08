@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 interface MultiPhotoUploadProps {
     label: string;
-    value?: string[];
-    onChange: (urls: string[]) => void;
+    value?: any[];
+    onChange: (urls: any[]) => void;
     error?: string;
     maxFiles?: number;
 }
@@ -18,7 +18,7 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
 
@@ -26,6 +26,16 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
         const filesToProcess = files.slice(0, remainingSlots);
 
         setIsUploading(true);
+        
+        // Try to get current location for the batch
+        let location: { latitude: number; longitude: number } | null = null;
+        try {
+            const { getCurrentLocation } = await import("@/lib/geolocation");
+            location = await getCurrentLocation();
+        } catch (err) {
+            console.warn("Location capture failed:", err);
+        }
+
         const promises = filesToProcess.map(async (file) => {
             const formData = new FormData();
             formData.append("file", file);
@@ -38,7 +48,13 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
                 throw new Error(err?.error || "Upload failed");
             }
             const data = await response.json();
-            return data.url as string;
+            
+            // If the user wants to send location from the web form, we'd need to update the form schema.
+            return {
+                url: data.url as string,
+                latitude: location?.latitude,
+                longitude: location?.longitude,
+            };
         });
 
         Promise.all(promises)
@@ -78,7 +94,7 @@ export function MultiPhotoUpload({ label, value = [], onChange, error, maxFiles 
                         className="relative aspect-video rounded-xl border-2 border-indigo-500 overflow-hidden group"
                     >
                         <img
-                            src={photoUrl}
+                            src={typeof photoUrl === 'string' ? photoUrl : photoUrl.url}
                             alt={`Upload preview ${idx + 1}`}
                             className="w-full h-full object-cover"
                         />

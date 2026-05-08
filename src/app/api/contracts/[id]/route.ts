@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             where: { id },
             include: {
                 holding: { include: { city: true, holdingType: true } },
-                vendor: { select: { id: true, name: true, phone: true } },
+                vendor: { select: { id: true, name: true, phone: true, kycDocumentUrl: true } },
             },
         });
         if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });

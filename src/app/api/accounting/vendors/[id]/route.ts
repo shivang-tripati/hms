@@ -14,6 +14,9 @@ export async function GET(
             include: {
                 city: true,
                 ledger: true,
+                contracts: {
+                    include: { holding: { select: { code: true, name: true } } }
+                },
                 payments: {
                     orderBy: { paymentDate: "desc" },
                     include: { cashBankLedger: { select: { name: true } } },

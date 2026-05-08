@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { holdingSchema, type HoldingFormData } from "@/lib/validations";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -101,6 +102,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             cityId: initialData.cityId || "",
             holdingTypeId: initialData.holdingTypeId || "",
             hsnCodeId: initialData.hsnCodeId || "",
+            isInstalled: (initialData as any).isInstalled ?? true,
             facing: initialData.facing || undefined,
             landmark: initialData.landmark || undefined,
             notes: initialData.notes || undefined,
@@ -121,6 +123,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             cityId: "",
             holdingTypeId: "",
             hsnCodeId: "",
+            isInstalled: true,
             images: [],
         };
 
@@ -138,9 +141,13 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                 });
                 toast.success("Holding updated successfully");
             } else {
+                const payload = { ...data };
+                if (initialData && (initialData as any).suggestionId) {
+                    (payload as any).suggestionId = (initialData as any).suggestionId;
+                }
                 await apiFetch('/api/holdings', {
                     method: 'POST',
-                    body: JSON.stringify(data),
+                    body: JSON.stringify(payload),
                 });
                 toast.success("Holding created successfully");
             }
@@ -226,7 +233,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         control={form.control}
                         name="address"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Address</FormLabel>
                                 <FormControl>
                                     <Textarea placeholder="Full address" {...field} />
@@ -239,7 +246,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         control={form.control}
                         name="landmark"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Landmark</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Nearby landmark" {...field} value={field.value || ""} />
@@ -299,7 +306,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         )}
                     />
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 col-span-1 sm:col-span-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 col-span-1 md:col-span-2">
                         <FormField
                             control={form.control}
                             name="width"
@@ -432,7 +439,6 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                                 <Select
                                     onValueChange={(value) => field.onChange(value === "none" ? undefined : value)}
                                     defaultValue={field.value || "none"}
-                                    disabled={form.watch("assetType") === "OWNED"}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
@@ -479,6 +485,29 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
 
                     <FormField
                         control={form.control}
+                        name="isInstalled"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        Currently Installed
+                                    </FormLabel>
+                                    <p className="text-sm text-muted-foreground">
+                                        Uncheck this if the hoarding structure is currently in stock (un-installed).
+                                    </p>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
                         name="maintenanceCycle"
                         render={({ field }) => (
                             <FormItem>
@@ -491,7 +520,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         )}
                     />
 
-                    <div className="col-span-1 sm:col-span-2 space-y-3">
+                    <div className="col-span-1 md:col-span-2 space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">Location Coordinates <span className="text-red-500">*</span></span>
                             <Button
@@ -584,7 +613,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         control={form.control}
                         name="notes"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Notes</FormLabel>
                                 <FormControl>
                                     <Textarea placeholder="Additional notes" {...field} value={field.value || ""} />
@@ -595,7 +624,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                     />
 
                     {/* Image Upload Section */}
-                    <div className="col-span-2">
+                    <div className="md:col-span-2">
                         <FormField
                             control={form.control}
                             name="images"

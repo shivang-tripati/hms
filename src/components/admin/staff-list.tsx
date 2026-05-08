@@ -273,9 +273,10 @@ function EditUserModal({ user, open, onOpenChange }: EditUserModalProps) {
 
 interface StaffListProps {
     staff: User[];
+    currentUserId?: string;
 }
 
-export function StaffList({ staff }: StaffListProps) {
+export function StaffList({ staff, currentUserId }: StaffListProps) {
     const router = useRouter();
     const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
     const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
@@ -419,9 +420,10 @@ export function StaffList({ staff }: StaffListProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                    className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                                                     onClick={() => handleToggleStatus(user)}
                                                     title={user.isActive ? "Deactivate User" : "Activate User"}
+                                                    disabled={user.id === currentUserId && user.isActive}
                                                 >
                                                     {user.isActive ? <Power className="h-4 w-4" /> : <PowerOff className="h-4 w-4" />}
                                                 </Button>
@@ -446,8 +448,9 @@ export function StaffList({ staff }: StaffListProps) {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-50"
                                                     onClick={() => handleDelete(user.id)}
+                                                    disabled={user.id === currentUserId}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

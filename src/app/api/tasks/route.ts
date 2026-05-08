@@ -15,7 +15,7 @@ export async function GET() {
             where: role === "STAFF" ? { assignedToId: userId } : {},
             orderBy: { createdAt: "desc" },
             include: {
-                holding: true,
+                holding: { select: { id: true, code: true, name: true } },
                 booking: {
                     include: {
                         client: { select: { id: true, name: true } },
@@ -26,6 +26,20 @@ export async function GET() {
                 assignedTo: { select: { name: true } },
             },
         });
+
+        // ── STAFF: strip financial info from list response ──
+        if (role === "STAFF") {
+            const safeTasks = tasks.map((task) => {
+                const { estimatedCost, actualCost, ...safeTask } = task as any;
+                if (safeTask.booking) {
+                    const { monthlyRate, totalAmount, ...safeBooking } = safeTask.booking;
+                    safeTask.booking = safeBooking;
+                }
+                return safeTask;
+            });
+            return NextResponse.json(safeTasks);
+        }
+
         return NextResponse.json(tasks);
     } catch (error) {
         console.error("[GET /api/tasks]", error);
@@ -41,11 +55,12 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = taskSchema.parse(body);
 
-        const { assignedTo, holdingId, bookingId, advertisementId, completedDate, ...otherData } = parsed;
+        const { assignedTo, holdingId, bookingId, advertisementId, completedDate,
+            newLatitude, newLongitude, newAddress, ...otherData } = parsed;
 
-        // For INSTALLATION/MOUNTING, auto-derive holdingId from the booking
+        // For MOUNTING, auto-derive holdingId from the booking
         let derivedHoldingId = holdingId || null;
-        if ((parsed.taskType === "INSTALLATION" || parsed.taskType === "MOUNTING") && bookingId) {
+        if (parsed.taskType === "MOUNTING" && bookingId) {
             const booking = await prisma.booking.findUnique({
                 where: { id: bookingId },
                 select: { holdingId: true },
@@ -55,9 +70,18 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // For RELOCATION or INSTALLATION, embed proposed new location into notes if provided
+        let notesWithLocation = otherData.notes || null;
+        if ((parsed.taskType === "RELOCATION" || parsed.taskType === "INSTALLATION") && (newLatitude || newLongitude || newAddress)) {
+            const label = parsed.taskType === "RELOCATION" ? "Proposed New Location" : "Suggested Installation Location";
+            const locationNote = `[${label}] Lat: ${newLatitude ?? "N/A"}, Lng: ${newLongitude ?? "N/A"}${newAddress ? `, Address: ${newAddress}` : ""}`;
+            notesWithLocation = otherData.notes ? `${otherData.notes}\n${locationNote}` : locationNote;
+        }
+
         const task = await prisma.task.create({
             data: {
                 ...otherData,
+                notes: notesWithLocation,
                 assignedToId: assignedTo || null,
                 holdingId: derivedHoldingId,
                 bookingId: bookingId || null,

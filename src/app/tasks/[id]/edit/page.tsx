@@ -1,9 +1,12 @@
 export const dynamic = 'force-dynamic';
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { Pencil } from "lucide-react";
 import { TaskForm } from "@/components/tasks/task-form";
+import { auth } from "@/auth";
+
+const LOCKED_STATUSES = ["UNDER_REVIEW", "COMPLETED"];
 
 interface EditTaskPageProps {
     params: Promise<{
@@ -12,7 +15,14 @@ interface EditTaskPageProps {
 }
 
 export default async function EditTaskPage({ params }: EditTaskPageProps) {
+    const session = await auth();
+    const role = session?.user?.role;
     const { id } = await params;
+
+    // ── Only ADMIN can access edit page ──
+    if (role !== "ADMIN") {
+        redirect(`/tasks/${id}`);
+    }
 
     let task: any;
     let holdings: any[];
@@ -36,6 +46,11 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
         notFound();
     }
 
+    // ── LOCK CHECK: redirect to detail page if task is locked ──
+    if (LOCKED_STATUSES.includes(task.status)) {
+        redirect(`/tasks/${id}`);
+    }
+
     // Include CONFIRMED/ACTIVE bookings + the task's current booking if any
     const activeBookings = bookings.filter(
         (b: any) => b.status === "CONFIRMED" || b.status === "ACTIVE" || b.id === task.bookingId
@@ -55,6 +70,7 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
                     bookings={activeBookings}
                     advertisements={advertisements}
                     staff={staff}
+                    role={role}
                 />
             </div>
         </div>

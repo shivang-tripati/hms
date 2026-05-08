@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FilterableDataTable } from "@/components/shared/filterable-data-table";
@@ -38,9 +39,16 @@ const vendorColumns = [
         accessorKey: "id",
         header: "",
         cell: (row: any) => (
-            <Link href={`/master-data/vendors/${row.id}/edit`}>
-                <Button size="sm" variant="ghost">Edit</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+                <Link href={`/master-data/vendors/${row.id}`}>
+                    <Button size="sm" variant="ghost">
+                        <Eye className="h-4 w-4" />
+                    </Button>
+                </Link>
+                <Link href={`/master-data/vendors/${row.id}/edit`}>
+                    <Button size="sm" variant="ghost">Edit</Button>
+                </Link>
+            </div>
         ),
     },
 ];

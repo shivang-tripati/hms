@@ -2,11 +2,15 @@ import { TaskForm } from "@/components/tasks/task-form";
 import { PageHeader } from "@/components/shared/page-header";
 import { apiFetch } from "@/lib/api";
 import { ClipboardList } from "lucide-react";
+import { auth } from "@/auth";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewTaskPage() {
+    const session = await auth();
+    const role = session?.user?.role;
+
     const [holdings, bookings, advertisements, staff] = await Promise.all([
         apiFetch<any[]>("/api/holdings"),
         apiFetch<any[]>("/api/bookings"),
@@ -34,6 +38,7 @@ export default async function NewTaskPage() {
                     bookings={activeBookings}
                     advertisements={advertisements}
                     staff={staffMembers}
+                    role={role}
                 />
             </div>
         </div>

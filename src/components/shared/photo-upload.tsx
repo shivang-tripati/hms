@@ -8,13 +8,13 @@ import { toast } from "sonner";
 
 interface PhotoUploadProps {
     label: string;
-    value?: string;
-    onChange: (base64: string) => void;
+    value?: any;
+    onChange: (val: any) => void;
     error?: string;
 }
 
 export function PhotoUpload({ label, value, onChange, error }: PhotoUploadProps) {
-    const [preview, setPreview] = useState<string | null>(value || null);
+    const [preview, setPreview] = useState<string | null>(typeof value === 'string' ? value : value?.url || null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,9 +34,21 @@ export function PhotoUpload({ label, value, onChange, error }: PhotoUploadProps)
                     throw new Error("Failed to upload file");
                 }
 
+                let location: { latitude: number; longitude: number } | null = null;
+                try {
+                    const { getCurrentLocation } = await import("@/lib/geolocation");
+                    location = await getCurrentLocation();
+                } catch (err) {
+                    console.warn("Location capture failed:", err);
+                }
+
                 const data = await response.json();
                 setPreview(data.url);
-                onChange(data.url);
+                onChange({
+                    url: data.url,
+                    latitude: location?.latitude,
+                    longitude: location?.longitude
+                });
             } catch (err) {
                 console.error("Upload error:", err);
                 toast.error("Failed to upload photo.");

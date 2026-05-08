@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, MapPin, LocateFixed } from "lucide-react";
 import {
     Form,
     FormControl,
@@ -36,7 +36,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { Holding, Advertisement, User, Booking } from "@prisma/client";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 type BookingWithRelations = Booking & {
     client?: { id: string; name: string };
@@ -70,16 +70,18 @@ interface TaskFormProps {
     bookings: BookingWithRelations[];
     advertisements: Advertisement[];
     staff: User[];
+    role?: string;
 }
 
-export function TaskForm({ initialData, holdings, bookings, advertisements, staff }: TaskFormProps) {
+export function TaskForm({ initialData, holdings, bookings, advertisements, staff, role }: TaskFormProps) {
+    const isStaff = role === "STAFF";
     const router = useRouter();
 
     const defaultValues: Partial<TaskFormData> = initialData
         ? {
             title: initialData.title,
             description: initialData.description || undefined,
-            taskType: initialData.taskType as "INSTALLATION" | "MOUNTING" | "MAINTENANCE" | "INSPECTION",
+            taskType: initialData.taskType as "INSTALLATION" | "MOUNTING" | "MAINTENANCE" | "INSPECTION" | "RELOCATION",
             priority: initialData.priority as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
             status: initialData.status as "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED",
             scheduledDate: new Date(initialData.scheduledDate),
@@ -110,19 +112,55 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
 
     const watchedTaskType = form.watch("taskType");
     const watchedBookingId = form.watch("bookingId");
-    const isBookingLinked = watchedTaskType === "INSTALLATION" || watchedTaskType === "MOUNTING";
-    const isHoldingLinked = watchedTaskType === "MAINTENANCE" || watchedTaskType === "INSPECTION";
-    const isHoldingRequired = watchedTaskType !== "INSPECTION";
+    const watchedHoldingId = form.watch("holdingId");
+    const isInstallation = watchedTaskType === "INSTALLATION";
+    const isMounting = watchedTaskType === "MOUNTING";
+    const isMaintenance = watchedTaskType === "MAINTENANCE";
+    const isInspection = watchedTaskType === "INSPECTION";
+    const isRelocation = watchedTaskType === "RELOCATION";
+    const isHoldingLinked = isMaintenance || isInspection || isInstallation || isRelocation;
     const watchedStatus = form.watch("status");
     const isAssignedToDisabled = ["IN_PROGRESS", "COMPLETED", "UNDER_REVIEW"].includes(watchedStatus);
     const assignedToName = staff.find((member) => member.id === defaultValues.assignedTo)?.name;
 
-    // Filter advertisements by selected booking
+    // Current geo location of selected hoarding (for RELOCATION display)
+    const [holdingGeo, setHoldingGeo] = useState<{ lat: number | null; lng: number | null; address: string } | null>(null);
+    const [fetchingGeo, setFetchingGeo] = useState(false);
+
+    // Fetch holding geo when RELOCATION/INSTALLATION + holdingId changes
+    useEffect(() => {
+        if ((!isRelocation && !isInstallation) || !watchedHoldingId) { setHoldingGeo(null); return; }
+        const h = holdings.find(h => h.id === watchedHoldingId) as any;
+        if (h) {
+            setHoldingGeo({ lat: h.latitude ? Number(h.latitude) : null, lng: h.longitude ? Number(h.longitude) : null, address: h.address });
+        }
+    }, [isRelocation, isInstallation, watchedHoldingId, holdings]);
+
+    // Auto-fill new location from browser GPS
+    const handleFetchGPS = useCallback(() => {
+        if (!navigator.geolocation) { return; }
+        setFetchingGeo(true);
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                form.setValue("newLatitude", pos.coords.latitude);
+                form.setValue("newLongitude", pos.coords.longitude);
+                setFetchingGeo(false);
+            },
+            () => { setFetchingGeo(false); }
+        );
+    }, [form]);
+
+    // Un-installed holdings: AVAILABLE status + isInstalled is false
+    const uninstalledHoldings = useMemo(() =>
+        holdings.filter((h: any) => h.isInstalled === false),
+    [holdings]);
+
+    // Filter advertisements by selected booking (MOUNTING only)
     const filteredAdvertisements = useMemo(() => {
-        if (!isBookingLinked || !watchedBookingId) return [];
+        if (!isMounting || !watchedBookingId) return [];
         const selectedBooking = bookings.find(b => b.id === watchedBookingId);
         return selectedBooking?.advertisements || [];
-    }, [isBookingLinked, watchedBookingId, bookings]);
+    }, [isMounting, watchedBookingId, bookings]);
 
     // Get holding info from selected booking (for display)
     const selectedBookingHolding = useMemo(() => {
@@ -134,8 +172,8 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
     const onSubmit = async (data: TaskFormData) => {
         try {
             // Clear irrelevant fields based on task type
-            if (isBookingLinked) {
-                data.holdingId = undefined; // Will be auto-derived from booking on server
+            if (isMounting) {
+                data.holdingId = undefined; // derived from booking on server
             } else {
                 data.bookingId = undefined;
                 data.advertisementId = undefined;
@@ -189,15 +227,15 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                 <Select
                                     onValueChange={(val) => {
                                         field.onChange(val);
-                                        // Clear linking fields when switching type
-                                        if (val === "INSTALLATION" || val === "MOUNTING") {
-                                            form.setValue("holdingId", undefined);
-                                            form.clearErrors("holdingId");
-                                        } else {
-                                            form.setValue("bookingId", undefined);
-                                            form.setValue("advertisementId", undefined);
-                                            form.clearErrors("bookingId");
-                                        }
+                                        // Reset linking fields on type switch
+                                        form.setValue("holdingId", undefined);
+                                        form.setValue("bookingId", undefined);
+                                        form.setValue("advertisementId", undefined);
+                                        form.setValue("newLatitude", undefined);
+                                        form.setValue("newLongitude", undefined);
+                                        form.setValue("newAddress", undefined);
+                                        form.clearErrors(["holdingId", "bookingId"]);
+                                        setHoldingGeo(null);
                                     }}
                                     defaultValue={field.value}
                                 >
@@ -211,6 +249,7 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                         <SelectItem value="MOUNTING">Mounting</SelectItem>
                                         <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
                                         <SelectItem value="INSPECTION">Inspection</SelectItem>
+                                        <SelectItem value="RELOCATION">Re-Location</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -319,8 +358,53 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                         )}
                     />
 
-                    {/* ── BOOKING DROPDOWN (for INSTALLATION / MOUNTING) ── */}
-                    {isBookingLinked && (
+                    {/* ── UN-INSTALLED HOARDING (for INSTALLATION) ── */}
+                    {isInstallation && (
+                        <FormField
+                            control={form.control}
+                            name="holdingId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Un-installed Hoarding <span className="text-destructive">*</span>
+                                    </FormLabel>
+                                    <Select
+                                        onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
+                                        defaultValue={field.value || "none"}
+                                        value={field.value || "none"}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select un-installed hoarding" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="none">Select hoarding</SelectItem>
+                                            {uninstalledHoldings.map((h) => (
+                                                <SelectItem key={h.id} value={h.id}>
+                                                    {h.code} — {h.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {holdingGeo && (
+                                        <FormDescription className="flex items-center gap-1.5 text-muted-foreground">
+                                            <MapPin className="h-3 w-3 shrink-0" />
+                                            Current: {holdingGeo.address}
+                                            {holdingGeo.lat !== null && ` (${holdingGeo.lat.toFixed(5)}, ${holdingGeo.lng?.toFixed(5)})`}
+                                        </FormDescription>
+                                    )}
+                                    {uninstalledHoldings.length === 0 && (
+                                        <FormDescription className="text-amber-600">No un-installed hoardings found.</FormDescription>
+                                    )}
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
+
+                    {/* ── BOOKING DROPDOWN (for MOUNTING) ── */}
+                    {isMounting && (
                         <FormField
                             control={form.control}
                             name="bookingId"
@@ -332,7 +416,6 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                     <Select
                                         onValueChange={(val) => {
                                             field.onChange(val === "none" ? undefined : val);
-                                            // Clear advertisement when booking changes
                                             form.setValue("advertisementId", undefined);
                                         }}
                                         defaultValue={field.value || "none"}
@@ -346,25 +429,20 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                         <SelectContent>
                                             <SelectItem value="none">Select a booking</SelectItem>
                                             {bookings.map((booking) => (
-                                                <SelectItem key={booking.id} value={booking.id} className="max-w-[var(--radix-select-trigger-width)] truncate">
+                                                <SelectItem key={booking.id} value={booking.id}>
                                                     <span className="truncate">{booking.bookingNumber} — {booking.client?.name || "N/A"} ({booking.holding?.code || "N/A"})</span>
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {selectedBookingHolding && (
-                                        <FormDescription>
-                                            Holding: <strong>{selectedBookingHolding.code}</strong> — {selectedBookingHolding.name}
-                                        </FormDescription>
-                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
                     )}
 
-                    {/* ── ADVERTISEMENT DROPDOWN (for INSTALLATION / MOUNTING, filtered by booking) ── */}
-                    {isBookingLinked && watchedBookingId && (
+                    {/* ── ADVERTISEMENT DROPDOWN (for MOUNTING, filtered by booking) ── */}
+                    {isMounting && watchedBookingId && (
                         <FormField
                             control={form.control}
                             name="advertisementId"
@@ -394,9 +472,7 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                         </SelectContent>
                                     </Select>
                                     {filteredAdvertisements.length === 0 && (
-                                        <FormDescription className="text-amber-600">
-                                            No advertisements found for this booking.
-                                        </FormDescription>
+                                        <FormDescription className="text-amber-600">No advertisements found for this booking.</FormDescription>
                                     )}
                                     <FormMessage />
                                 </FormItem>
@@ -405,7 +481,7 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                     )}
 
                     {/* ── HOLDING DROPDOWN (for MAINTENANCE / INSPECTION) ── */}
-                    {isHoldingLinked && (
+                    {(isMaintenance || isInspection) && (
                         <FormField
                             control={form.control}
                             name="holdingId"
@@ -413,7 +489,7 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                 <FormItem>
                                     <FormLabel>
                                         Holding{" "}
-                                        {watchedTaskType === "MAINTENANCE" ? (
+                                        {isMaintenance ? (
                                             <span className="text-destructive">*</span>
                                         ) : (
                                             <span className="text-muted-foreground text-xs font-normal">(Optional)</span>
@@ -430,12 +506,10 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {watchedTaskType !== "MAINTENANCE" && (
-                                                <SelectItem value="none">None</SelectItem>
-                                            )}
-                                            {holdings.map((holding) => (
-                                                <SelectItem key={holding.id} value={holding.id}>
-                                                    {holding.code} - {holding.name}
+                                            {isInspection && <SelectItem value="none">None</SelectItem>}
+                                            {holdings.map((h) => (
+                                                <SelectItem key={h.id} value={h.id}>
+                                                    {h.code} — {h.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -446,19 +520,117 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                         />
                     )}
 
-                    <FormField
-                        control={form.control}
-                        name="estimatedCost"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Estimated Cost (₹)</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    {/* ── RELOCATION / INSTALLATION: Hoarding picker + current geo + new location ── */}
+                    {(isRelocation || isInstallation) && (
+                        <>
+                            {isRelocation && (
+                                <FormField
+                                    control={form.control}
+                                    name="holdingId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>
+                                                Hoarding to Relocate <span className="text-destructive">*</span>
+                                            </FormLabel>
+                                            <Select
+                                                onValueChange={(val) => field.onChange(val === "none" ? undefined : val)}
+                                                defaultValue={field.value || "none"}
+                                                value={field.value || "none"}
+                                            >
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select hoarding" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="none">Select hoarding</SelectItem>
+                                                    {holdings.map((h) => (
+                                                        <SelectItem key={h.id} value={h.id}>
+                                                            {h.code} — {h.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {holdingGeo && (
+                                                <FormDescription className="flex items-center gap-1.5 text-muted-foreground">
+                                                    <MapPin className="h-3 w-3 shrink-0" />
+                                                    Current: {holdingGeo.address}
+                                                    {holdingGeo.lat !== null && ` (${holdingGeo.lat.toFixed(5)}, ${holdingGeo.lng?.toFixed(5)})`}
+                                                </FormDescription>
+                                            )}
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+
+                            <div className="md:col-span-2 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/40 dark:bg-indigo-950/20 dark:border-indigo-700 p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                                        <LocateFixed className="h-4 w-4" /> {isRelocation ? "Suggested New Location" : "Suggested Installation Location"}
+                                    </p>
+                                    <Button type="button" size="sm" variant="outline" onClick={handleFetchGPS} disabled={fetchingGeo}
+                                        className="h-7 text-xs gap-1.5">
+                                        <LocateFixed className="h-3 w-3" />{fetchingGeo ? "Fetching..." : "Use My Location"}
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField control={form.control} name="newLatitude"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs">New Latitude</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" step="any" placeholder="e.g. 22.31925" {...field}
+                                                        onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField control={form.control} name="newLongitude"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-xs">New Longitude</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" step="any" placeholder="e.g. 70.80160" {...field}
+                                                        onChange={e => field.onChange(e.target.value === "" ? undefined : parseFloat(e.target.value))} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <FormField control={form.control} name="newAddress"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs">New Address / Landmark</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="New site address or landmark" {...field} value={field.value || ""} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {/* ── FINANCIAL FIELDS: Admin only ── */}
+                    {!isStaff && (
+                        <FormField
+                            control={form.control}
+                            name="estimatedCost"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Estimated Cost (₹)</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value))} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <FormField
                         control={form.control}
@@ -488,7 +660,7 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                         control={form.control}
                         name="description"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Description</FormLabel>
                                 <FormControl>
                                     <Textarea placeholder="Task details..." {...field} value={field.value || ""} />

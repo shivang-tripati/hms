@@ -193,7 +193,7 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                         control={form.control}
                         name="holdingId"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Holding</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
@@ -314,7 +314,7 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                         )}
                     />
 
-                    <div className="col-span-2 bg-muted/30 p-3 rounded-md text-sm text-muted-foreground">
+                    <div className="md:col-span-2 bg-muted/30 p-3 rounded-md text-sm text-muted-foreground">
                         Duration: <span className="font-medium text-foreground">{duration} days</span>
                     </div>
 
@@ -379,7 +379,11 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    disabled={!initialData}
+                                >
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select status" />
@@ -392,6 +396,11 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                                         <SelectItem value="CANCELLED">Cancelled</SelectItem>
                                     </SelectContent>
                                 </Select>
+                                {!initialData && (
+                                    <FormDescription>
+                                        New bookings start as <strong>Confirmed</strong>. Status will automatically update to <strong>Active</strong> after first mounting.
+                                    </FormDescription>
+                                )}
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -418,7 +427,7 @@ export function BookingForm({ initialData, clients, holdings }: BookingFormProps
                         control={form.control}
                         name="notes"
                         render={({ field }) => (
-                            <FormItem className="col-span-2">
+                            <FormItem className="md:col-span-2">
                                 <FormLabel>Notes</FormLabel>
                                 <FormControl>
                                     <Textarea placeholder="Booking notes" {...field} value={field.value || ""} />

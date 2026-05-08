@@ -1,6 +1,6 @@
 "use client"
 
-import { MoreHorizontal, Eye, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -18,6 +18,9 @@ import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatEnum } from "@/lib/utils";
 
+/** Statuses where the task is locked and non-editable */
+const LOCKED_STATUSES = ["UNDER_REVIEW", "COMPLETED"];
+
 export const getTaskListColumns = (role?: string) => [
     {
         header: "Title",
@@ -27,6 +30,16 @@ export const getTaskListColumns = (role?: string) => [
     {
         header: "Type",
         cell: (row: any) => formatEnum(row.taskType),
+    },
+    {
+        header: "Hoarding No",
+        cell: (row: any) => {
+            // Direct holding (MAINTENANCE/INSPECTION)
+            const holdingCode = row.holding?.code;
+            // Booking-linked holding (INSTALLATION/MOUNTING)
+            const bookingHoldingCode = row.booking?.holding?.code;
+            return holdingCode || bookingHoldingCode || "—";
+        },
     },
     {
         header: "Priority",
@@ -42,7 +55,14 @@ export const getTaskListColumns = (role?: string) => [
     },
     {
         header: "Status",
-        cell: (row: any) => <StatusBadge status={row.status} />,
+        cell: (row: any) => (
+            <div className="flex items-center gap-1.5">
+                <StatusBadge status={row.status} />
+                {LOCKED_STATUSES.includes(row.status) && (
+                    <Lock className="h-3 w-3 text-amber-500" />
+                )}
+            </div>
+        ),
     },
     {
         header: "Actions",
@@ -53,6 +73,9 @@ export const getTaskListColumns = (role?: string) => [
 
 function TaskActions({ task, role }: { task: any; role?: string }) {
     const router = useRouter();
+    const isLocked = LOCKED_STATUSES.includes(task.status);
+    const isBookingLinked = !!task.bookingId;
+    const canEdit = role === "ADMIN" && !isLocked;
 
     const handleDelete = async () => {
         try {
@@ -79,7 +102,7 @@ function TaskActions({ task, role }: { task: any; role?: string }) {
                         <Eye className="mr-2 h-4 w-4" /> View Details
                     </Link>
                 </DropdownMenuItem>
-                {role === "ADMIN" && (
+                {canEdit && (
                     <>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
@@ -90,6 +113,14 @@ function TaskActions({ task, role }: { task: any; role?: string }) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
                             <Trash2 className="mr-2 h-4 w-4" /> Delete
+                        </DropdownMenuItem>
+                    </>
+                )}
+                {role === "ADMIN" && isLocked && (
+                    <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem disabled className="text-amber-600 text-xs">
+                            <Lock className="mr-2 h-3 w-3" /> Locked ({formatEnum(task.status)})
                         </DropdownMenuItem>
                     </>
                 )}

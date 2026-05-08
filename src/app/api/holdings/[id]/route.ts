@@ -12,25 +12,48 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 city: true,
                 holdingType: true,
                 hsnCode: true,
-                vendor: { 
+                vendor: {
                     include: { city: true },
                 },
                 ownershipContracts: { orderBy: { startDate: "desc" } },
                 bookings: {
-                    include: { client: true },
+                    include: {
+                        client: true,
+                        advertisements: {
+                            include: {
+                                tasks: {
+                                    where: { taskType: "MOUNTING" },
+                                    orderBy: { completedDate: "desc" }
+                                }
+                            },
+                            orderBy: { createdAt: "desc" }
+                        }
+                    },
                     orderBy: { startDate: "desc" },
+                    take: 1,
                 },
-                tasks: { orderBy: { scheduledDate: "desc" }, take: 10 },
+                tasks: { orderBy: { scheduledDate: "desc" }, take: 5 },
                 inspections: {
                     include: { photos: true },
                     orderBy: { inspectionDate: "desc" },
                     take: 5,
                 },
                 maintenanceRecords: { orderBy: { performedDate: "desc" }, take: 5 },
-            },
+                holdingPhotos: true,
+            } as any,
         });
         if (!holding) return NextResponse.json({ error: "Not found" }, { status: 404 });
-        return NextResponse.json(holding);
+
+        // Transform for backward compatibility
+        const response = {
+            ...holding,
+            images: [
+                ...(holding as any).legacyImages || [],
+                ...((holding as any).holdingPhotos || [])
+            ]
+        };
+
+        return NextResponse.json(response);
     } catch (error) {
         console.error("[GET /api/holdings/[id]]", error);
         return NextResponse.json({ error: "Failed to fetch holding" }, { status: 500 });
@@ -45,12 +68,54 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const { id } = await params;
         const body = await request.json();
         const parsed = holdingSchema.parse(body);
-        const holding = await prisma.holding.update({
-            where: { id },
-            data: {
-                ...parsed,
-                vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
-            },
+        const { images, ...rest } = parsed;
+        const holding = await prisma.$transaction(async (tx) => {
+            const updatedHolding = await tx.holding.update({
+                where: { id },
+                data: {
+                    ...rest,
+                    vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
+                },
+            });
+
+            if (images) {
+                // Delete existing photos not in the new list
+                const newUrls = images.map((img: any) => typeof img === "string" ? img : img.url);
+                await (tx as any).holdingPhoto.deleteMany({
+                    where: {
+                        holdingId: id,
+                        url: { notIn: newUrls }
+                    }
+                });
+
+                // Add new photos
+                const existingPhotos = await (tx as any).holdingPhoto.findMany({
+                    where: { holdingId: id }
+                });
+                const existingUrls = existingPhotos.map(p => p.url);
+                const photosToAdd = images.filter((img: any) => {
+                    const url = typeof img === "string" ? img : img.url;
+                    return !existingUrls.includes(url);
+                });
+
+                if (photosToAdd.length > 0) {
+                    await (tx as any).holdingPhoto.createMany({
+                        data: photosToAdd.map((img: any) => ({
+                            url: typeof img === "string" ? img : img.url,
+                            holdingId: id,
+                            uploadedByUserName: session.user?.name || "System",
+                            uploadedById: session.user?.id || null,
+                            latitude: typeof img === "object" ? img.latitude : null,
+                            longitude: typeof img === "object" ? img.longitude : null,
+                        }))
+                    });
+                }
+            }
+
+            return await (tx as any).holding.findUnique({
+                where: { id },
+                include: { holdingPhotos: true }
+            });
         });
         return NextResponse.json(holding);
     } catch (error: any) {

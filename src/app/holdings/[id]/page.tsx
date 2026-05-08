@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatArea, formatDate, formatEnum } from "@/lib/utils";
-import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation } from "lucide-react";
+import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { auth } from "@/auth";
@@ -51,6 +51,13 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={holding.status} />
+                    {(role === "ADMIN" || role === "STAFF") && (
+                        <Button asChild variant="outline" size="sm" className="bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700">
+                            <Link href={`/holdings/${id}/inspect`}>
+                                <ClipboardCheck className="mr-2 h-4 w-4" /> Report Inspection
+                            </Link>
+                        </Button>
+                    )}
                     {holding.latitude && holding.longitude && (
                         <Button asChild variant="outline" size="sm">
                             <a
@@ -128,7 +135,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                     <Card className="col-span-1">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4" /> Current Booking
+                                <CalendarClock className="h-4 w-4" /> {Date.now() > new Date(holding?.bookings?.[0]?.endDate).getTime() ? "Past Booking" : "Current Booking"}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -142,6 +149,30 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                                     <Button asChild variant="outline" className="w-full" size="sm">
                                         <Link href={`/bookings/${holding.bookings[0].id}`}>View Details</Link>
                                     </Button>
+                                    {holding.bookings[0].advertisements?.length > 0 && (
+                                        <div className="mt-4 space-y-2 pt-2 border-t">
+                                            <p className="text-xs font-semibold uppercase text-muted-foreground">Advertisement History</p>
+                                            <div className="space-y-2">
+                                                {holding.bookings[0].advertisements.map((ad: any) => (
+                                                    <div key={ad.id} className="text-sm p-2 rounded border bg-card/50">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className="font-medium truncate">{ad.campaignName}</span>
+                                                            <div className="scale-75 origin-right"><StatusBadge status={ad.status} /></div>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground">{ad.brandName}</p>
+                                                        {ad.tasks?.map((t: any) => (
+                                                            t.completedDate && (
+                                                                <div key={t.id} className="mt-1.5 text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                                                                    <CalendarClock className="h-3 w-3" />
+                                                                    Mounted: {formatDate(t.completedDate)}
+                                                                </div>
+                                                            )
+                                                        ))}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-center py-6 space-y-3">
@@ -167,8 +198,8 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                         <CardTitle className="text-base">Images</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {holding.images && holding.images.length > 0 ? (
-                            <PhotoGallery photos={holding.images.filter((url: string) => url)} />
+                        {holding.holdingPhotos && holding.holdingPhotos.length > 0 ? (
+                            <PhotoGallery photos={holding.holdingPhotos} />
                         ) : (
                             <p className="text-muted-foreground text-sm">No images available for this holding.</p>
                         )}

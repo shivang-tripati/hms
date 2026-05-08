@@ -11,7 +11,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     companyName: "",
     tagline: "",
@@ -28,9 +28,11 @@ export default function SettingsPage() {
     terms: [] as string[],
     signatoryName: "",
     signatureUrl: "",
+    logoUrl: "",
     footerAddress: "",
     website: "",
     phone: "",
+    state: "",
   });
 
   const [termsText, setTermsText] = useState("");
@@ -57,9 +59,11 @@ export default function SettingsPage() {
             terms: data.terms || [],
             signatoryName: data.signatoryName || "",
             signatureUrl: data.signatureUrl || "",
+            logoUrl: data.logoUrl || "",
             footerAddress: data.footerAddress || "",
             website: data.website || "",
-            phone: data.phone || "",
+            phone: data.phone || "Call: 82580-05500",
+            state: data.state || "Tripura",
           });
           setTermsText((data.terms || []).join("\n"));
         }
@@ -101,6 +105,32 @@ export default function SettingsPage() {
       if (res.ok) {
         const result = await res.json();
         setFormData((prev) => ({ ...prev, signatureUrl: result.url }));
+      }
+    } catch (err) {
+      console.error("Upload failed", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const data = new FormData();
+      data.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: data,
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setFormData((prev) => ({ ...prev, logoUrl: result.url }));
       }
     } catch (err) {
       console.error("Upload failed", err);
@@ -157,17 +187,17 @@ export default function SettingsPage() {
         {/* Header / Basic Info */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b pb-2">Basic Info & Header</h2>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="companyName">Company Name</Label>
             <Input id="companyName" name="companyName" value={formData.companyName} onChange={handleChange} />
           </div>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="tagline">Tagline</Label>
             <Input id="tagline" name="tagline" value={formData.tagline} onChange={handleChange} />
           </div>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="footerAddress">Company Address (Footer)</Label>
             <Textarea id="footerAddress" name="footerAddress" value={formData.footerAddress} onChange={handleChange} rows={3} />
@@ -188,12 +218,12 @@ export default function SettingsPage() {
         {/* Legal & Issued By */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b pb-2">Tax Details (Issued By)</h2>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="address">Issued By Address</Label>
             <Textarea id="address" name="address" value={formData.address} onChange={handleChange} rows={2} />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="gstNo">GST No.</Label>
@@ -204,12 +234,17 @@ export default function SettingsPage() {
               <Input id="panNo" name="panNo" value={formData.panNo} onChange={handleChange} />
             </div>
           </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="state">State (Used for GST Logic)</Label>
+            <Input id="state" name="state" value={formData.state} onChange={handleChange} placeholder="e.g. Tripura" />
+          </div>
         </section>
 
         {/* Bank Details */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b pb-2">Bank Details</h2>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="bankName">Bank Name</Label>
@@ -245,15 +280,15 @@ export default function SettingsPage() {
         {/* Terms & Signatory */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b pb-2">Terms & Signature</h2>
-          
+
           <div className="grid gap-2">
             <Label htmlFor="terms">Terms & Conditions (One per line)</Label>
-            <Textarea 
-              id="terms" 
-              name="terms" 
-              value={termsText} 
-              onChange={handleTermsChange} 
-              rows={5} 
+            <Textarea
+              id="terms"
+              name="terms"
+              value={termsText}
+              onChange={handleTermsChange}
+              rows={5}
             />
           </div>
 
@@ -275,6 +310,23 @@ export default function SettingsPage() {
               {formData.signatureUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={formData.signatureUrl} alt="Signature Preview" className="h-10 object-contain border bg-white p-1 rounded" />
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label>Logo</Label>
+            <div className="flex items-center gap-4">
+              <Button asChild variant="outline" className="w-fit" disabled={uploading}>
+                <label className="cursor-pointer flex items-center gap-2">
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  Upload Logo
+                  <input type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                </label>
+              </Button>
+              {formData.logoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={formData.logoUrl} alt="Company Logo Preview" className="h-10 object-contain border bg-white p-1 rounded" />
               )}
             </div>
           </div>

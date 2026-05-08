@@ -49,10 +49,17 @@ export default async function SuggestionDetailsPage({ params }: SuggestionDetail
                     {role === "ADMIN" && suggestion.status === "PENDING" && (
                         <SuggestionStatusActions id={id} />
                     )}
-                    {role === "ADMIN" && suggestion.status === "ACCEPTED" && (
+                    {role === "ADMIN" && suggestion.status === "ACCEPTED" && !suggestion.holdingId && (
                         <Button asChild size="sm">
                             <Link href={`/holdings/new?suggestionId=${suggestion.id}&address=${encodeURIComponent(suggestion.address)}&cityId=${suggestion.cityId}&lat=${suggestion.latitude || ""}&lng=${suggestion.longitude || ""}${suggestion.landmark ? `&landmark=${encodeURIComponent(suggestion.landmark)}` : ""}${suggestion.photos?.length ? `&photos=${encodeURIComponent(JSON.stringify(suggestion.photos))}` : ""}`}>
                                 Convert to Holding <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    )}
+                    {suggestion.holdingId && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/holdings/${suggestion.holdingId}`}>
+                                View Created Holding <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
                     )}

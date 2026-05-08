@@ -1,7 +1,7 @@
 "use client";
 
 import { Invoice, Receipt } from "@prisma/client";
-import { MoreHorizontal, Eye, Pencil, Trash2, Printer } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, Printer, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -52,6 +52,7 @@ export const InvoiceListColumns = [
 
 function InvoiceActions({ invoice }: { invoice: Invoice }) {
     const router = useRouter();
+    const isSentLocked = invoice.status === "SENT";
 
     const handleDelete = async () => {
         try {
@@ -78,14 +79,25 @@ function InvoiceActions({ invoice }: { invoice: Invoice }) {
                         <Eye className="mr-2 h-4 w-4" /> View Details
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                    </Link>
-                </DropdownMenuItem>
+                {isSentLocked ? (
+                    <DropdownMenuItem disabled>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit (Locked - Sent)
+                    </DropdownMenuItem>
+                ) : (
+                    <DropdownMenuItem asChild>
+                        <Link href={`/billing/invoices/${invoice.id}/edit`}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem asChild>
                     <Link href={`/billing/invoices/${invoice.id}/print`}>
                         <Printer className="mr-2 h-4 w-4" /> Print Invoice
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href={`/billing/invoices/${invoice.id}/annexure`} target="_blank">
+                        <Download className="mr-2 h-4 w-4" /> Download Annexure
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

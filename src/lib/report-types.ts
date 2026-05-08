@@ -81,6 +81,11 @@ export interface HoldingSummary {
     performedBy: string;
   } | null;
   latestCondition: string | null;
+  latestInspection: {
+    date: string;
+    condition: string;
+    remarks: string | null;
+  } | null;
   revenue: number;
 }
 

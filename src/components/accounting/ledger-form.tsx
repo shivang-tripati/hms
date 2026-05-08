@@ -80,13 +80,13 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                     method: "PUT",
                     body: JSON.stringify(payload),
                 });
-                toast.success("Ledger updated successfully");
+                toast.success("Account updated successfully");
             } else {
                 await apiFetch("/api/accounting/ledgers", {
                     method: "POST",
                     body: JSON.stringify(payload),
                 });
-                toast.success("Ledger created successfully");
+                toast.success("Account created successfully");
             }
             router.push("/master-data/ledgers");
             router.refresh();
@@ -122,7 +122,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         name="name"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Ledger Name</FormLabel>
+                                <FormLabel>Account Name</FormLabel>
                                 <FormControl>
                                     <Input placeholder="e.g. SBI Current Account" {...field} />
                                 </FormControl>
@@ -136,7 +136,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         name="code"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Ledger Code</FormLabel>
+                                <FormLabel>Account Code</FormLabel>
                                 <FormControl>
                                     <Input placeholder="e.g. BANK-SBI" {...field} />
                                 </FormControl>
@@ -150,7 +150,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         name="type"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Ledger Type</FormLabel>
+                                <FormLabel>Account Type</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value}
@@ -178,7 +178,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         name="parentId"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Under (Parent Ledger)</FormLabel>
+                                <FormLabel>Under (Parent Account)</FormLabel>
                                 <Select
                                     onValueChange={field.onChange}
                                     defaultValue={field.value || undefined}
@@ -215,9 +215,9 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                                     />
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
-                                    <FormLabel>Group Ledger</FormLabel>
+                                    <FormLabel>Group Account</FormLabel>
                                     <FormDescription>
-                                        Group ledgers act as containers and cannot have transactions posted directly
+                                        Group accounts act as containers and cannot have transactions posted directly
                                     </FormDescription>
                                 </div>
                             </FormItem>
@@ -230,7 +230,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         Auto-Posting Flags
                     </p>
                     <p className="text-xs text-muted-foreground mb-4">
-                        These flags help the system automatically identify this ledger for invoice, receipt, and payment processing.
+                        These flags help the system automatically identify this account for invoice, receipt, and payment processing.
                     </p>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {flagFields.map(({ name, label }) => (
@@ -263,7 +263,7 @@ export function LedgerForm({ initialData, ledgers }: LedgerFormProps) {
                         Cancel
                     </Button>
                     <Button type="submit">
-                        {initialData ? "Update Ledger" : "Create Ledger"}
+                        {initialData ? "Update Account" : "Create Account"}
                     </Button>
                 </div>
             </form>

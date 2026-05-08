@@ -47,11 +47,12 @@ export const holdingSchema = z.object({
     facing: z.string().optional(),
     landmark: z.string().optional(),
     status: z.enum(["AVAILABLE", "BOOKED", "UNDER_MAINTENANCE", "INACTIVE"]).default("AVAILABLE"),
+    isInstalled: z.boolean().default(true),
     assetType: z.enum(["OWNED", "RENTED"]).default("OWNED"),
     vendorId: z.string().optional().nullable(),
     maintenanceCycle: z.coerce.number().int().positive().default(90),
     notes: z.string().optional(),
-    images: z.array(z.string()).min(1, "At least one image is required"),
+    images: z.array(z.any()).min(1, "At least one image is required"),
     cityId: z.string().min(1, "City is required"),
     holdingTypeId: z.string().min(1, "Holding type is required"),
     hsnCodeId: z.string().min(1, "HSN code is required"),
@@ -149,7 +150,7 @@ export type AdvertisementFormData = z.infer<typeof advertisementSchema>;
 export const taskSchema = z.object({
     title: z.string().min(1, "Title is required"),
     description: z.string().optional(),
-    taskType: z.enum(["INSTALLATION", "MOUNTING", "MAINTENANCE", "INSPECTION"]),
+    taskType: z.enum(["INSTALLATION", "MOUNTING", "MAINTENANCE", "INSPECTION", "RELOCATION"]),
     priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
     status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).default("PENDING"),
     scheduledDate: z.coerce.date(),
@@ -161,13 +162,26 @@ export const taskSchema = z.object({
     bookingId: z.string().optional(),
     holdingId: z.string().optional(),
     advertisementId: z.string().optional(),
+    // RELOCATION-specific: proposed new location
+    newLatitude: z.coerce.number().min(-90).max(90).optional(),
+    newLongitude: z.coerce.number().min(-180).max(180).optional(),
+    newAddress: z.string().optional(),
 }).superRefine((data, ctx) => {
-    // INSTALLATION & MOUNTING require a booking
-    if ((data.taskType === "INSTALLATION" || data.taskType === "MOUNTING") &&
+    // INSTALLATION requires a holding (un-installed hoarding)
+    if (data.taskType === "INSTALLATION" &&
+        (!data.holdingId || data.holdingId.trim() === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Hoarding is required for Installation tasks",
+            path: ["holdingId"],
+        });
+    }
+    // MOUNTING requires a booking
+    if (data.taskType === "MOUNTING" &&
         (!data.bookingId || data.bookingId.trim() === "")) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "Booking is required for Installation/Mounting tasks",
+            message: "Booking is required for Mounting tasks",
             path: ["bookingId"],
         });
     }
@@ -177,6 +191,15 @@ export const taskSchema = z.object({
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "Holding is required for Maintenance tasks",
+            path: ["holdingId"],
+        });
+    }
+    // RELOCATION requires a holding
+    if (data.taskType === "RELOCATION" &&
+        (!data.holdingId || data.holdingId.trim() === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Hoarding is required for Relocation tasks",
             path: ["holdingId"],
         });
     }
@@ -194,9 +217,12 @@ export const taskExecutionSchema = z.object({
     remarks: z.string().optional(),
     latitude: z.number(),
     longitude: z.number(),
-    frontViewUrl: z.string().min(1, "Front view photo is required"),
-    leftViewUrl: z.string().min(1, "Left view photo is required"),
-    rightViewUrl: z.string().min(1, "Right view photo is required"),
+    frontViewUrl: z.any(),
+    leftViewUrl: z.any(),
+    rightViewUrl: z.any(),
+    illuminationOk: z.boolean().optional(),
+    structureOk: z.boolean().optional(),
+    visibilityOk: z.boolean().optional(),
 });
 
 export type TaskExecutionFormData = z.infer<typeof taskExecutionSchema>;
@@ -232,6 +258,7 @@ export const invoiceLineItemInputSchema = z.object({
     quantity: z.coerce.number().positive("Quantity must be positive"),
     rate: z.coerce.number().min(0, "Rate cannot be negative"),
     bookingId: z.string().optional(),
+    invoiceItemMetadata: z.any().optional(),
 });
 
 export const invoiceUpsertPayloadSchema = invoiceSchema.extend({
@@ -259,6 +286,12 @@ export type ReceiptFormData = z.infer<typeof receiptSchema>;
 
 // ─── Location Suggestion Schemas ──────────────────────────────────────────────
 
+const suggestionPhotoSchema = z.object({
+    url: z.string().min(1),
+});
+
+export type SuggestionPhoto = z.infer<typeof suggestionPhotoSchema>;
+
 export const locationSuggestionSchema = z.object({
     address: z.string().min(1, "Address is required"),
     cityId: z.string().min(1, "City is required"),
@@ -266,7 +299,7 @@ export const locationSuggestionSchema = z.object({
     longitude: z.coerce.number({ error: "Longitude is required" }).min(-180, "Invalid longitude").max(180, "Invalid longitude"),
     landmark: z.string().optional(),
     description: z.string().optional(),
-    photos: z.array(z.string()).optional().default([]),
+    photos: z.array(suggestionPhotoSchema).optional(),
     proposedRent: z.number().optional(),
     ownerName: z.string().optional(),
     ownerPhone: z.string().optional(),
@@ -322,8 +355,25 @@ export const paymentSchema = z.object({
     paymentMode: z.enum(["CASH", "CHEQUE", "NEFT", "RTGS", "UPI", "CARD", "OTHER"]),
     referenceNo: z.string().optional(),
     notes: z.string().optional(),
-    vendorId: z.string().min(1, "Vendor is required"),
+    paymentType: z.enum(["VENDOR", "OTHER_LIABILITY"]).default("VENDOR"),
+    vendorId: z.string().optional().nullable(),
+    liabilityLedgerId: z.string().optional().nullable(),
     cashBankLedgerId: z.string().min(1, "Cash/Bank ledger is required"),
+}).superRefine((data, ctx) => {
+    if (data.paymentType === "VENDOR" && (!data.vendorId || data.vendorId === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Vendor is required for Vendor payments",
+            path: ["vendorId"],
+        });
+    }
+    if (data.paymentType === "OTHER_LIABILITY" && (!data.liabilityLedgerId || data.liabilityLedgerId === "")) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Liability Ledger is required",
+            path: ["liabilityLedgerId"],
+        });
+    }
 });
 
 export type PaymentFormData = z.infer<typeof paymentSchema>;

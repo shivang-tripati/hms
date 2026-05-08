@@ -18,14 +18,33 @@ import type {
 // CLIENT REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function getClientListReport(): Promise<ClientListReport> {
+export async function getClientListReport(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<ClientListReport> {
+  const searchFilter = filters?.search
+    ? {
+      OR: [
+        { name: { contains: filters.search, mode: "insensitive" as const } },
+        { contactPerson: { contains: filters.search, mode: "insensitive" as const } },
+      ],
+    }
+    : {};
+
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
+  const invoiceFilter = Object.keys(dateFilter).length > 0 ? { invoiceDate: dateFilter } : {};
+  const bookingFilter = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
+
   const clients = await prisma.client.findMany({
-    where: { isActive: true },
+    where: { isActive: true, ...searchFilter },
     include: {
       bookings: {
+        where: bookingFilter,
         select: { id: true, status: true, totalAmount: true },
       },
       invoices: {
+        where: invoiceFilter,
         select: {
           id: true,
           status: true,
@@ -202,14 +221,23 @@ export async function getClientDetail(
 // HOLDING REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function getHoldingOccupancy(): Promise<HoldingOccupancy> {
+export async function getHoldingOccupancy(filters?: { search?: string }): Promise<HoldingOccupancy> {
+  const searchFilter = filters?.search
+    ? {
+      OR: [
+        { code: { contains: filters.search, mode: "insensitive" as const } },
+        { name: { contains: filters.search, mode: "insensitive" as const } },
+      ],
+    }
+    : {};
+
   const [total, available, booked, underMaintenance, inactive] =
     await Promise.all([
-      prisma.holding.count(),
-      prisma.holding.count({ where: { status: "AVAILABLE" } }),
-      prisma.holding.count({ where: { status: "BOOKED" } }),
-      prisma.holding.count({ where: { status: "UNDER_MAINTENANCE" } }),
-      prisma.holding.count({ where: { status: "INACTIVE" } }),
+      prisma.holding.count({ where: searchFilter }),
+      prisma.holding.count({ where: { status: "AVAILABLE", ...searchFilter } }),
+      prisma.holding.count({ where: { status: "BOOKED", ...searchFilter } }),
+      prisma.holding.count({ where: { status: "UNDER_MAINTENANCE", ...searchFilter } }),
+      prisma.holding.count({ where: { status: "INACTIVE", ...searchFilter } }),
     ]);
 
   return {
@@ -222,14 +250,45 @@ export async function getHoldingOccupancy(): Promise<HoldingOccupancy> {
   };
 }
 
-export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
+export async function getHoldingsSummary(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<HoldingSummary[]> {
+  const searchFilter = filters?.search
+    ? {
+      OR: [
+        { code: { contains: filters.search, mode: "insensitive" as const } },
+        { name: { contains: filters.search, mode: "insensitive" as const } },
+      ],
+    }
+    : {};
+
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
+  const taskFilter = Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {};
+  const maintenanceFilter = Object.keys(dateFilter).length > 0 ? { performedDate: dateFilter } : {};
+  const invoiceFilter = Object.keys(dateFilter).length > 0 ? { invoiceDate: dateFilter } : {};
+
   const holdings = await prisma.holding.findMany({
+    where: searchFilter,
     include: {
       city: { select: { name: true } },
       tasks: {
-        select: { id: true, taskType: true, status: true },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          taskType: true,
+          status: true,
+          createdAt: true,
+          executions: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { createdAt: true, condition: true, remarks: true },
+          },
+        },
       },
       maintenanceRecords: {
+        where: maintenanceFilter,
         orderBy: { performedDate: "desc" },
         take: 1,
         select: {
@@ -243,11 +302,12 @@ export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
       inspections: {
         orderBy: { inspectionDate: "desc" },
         take: 1,
-        select: { condition: true },
+        select: { inspectionDate: true, condition: true, remarks: true },
       },
       bookings: {
         include: {
           invoices: {
+            where: invoiceFilter,
             select: { totalAmount: true, status: true },
           },
         },
@@ -259,7 +319,13 @@ export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
   return holdings.map((h) => {
     const tasksByType: Record<string, number> = {};
     const tasksByStatus: Record<string, number> = {};
+
+    // Process all tasks for breakdown, but respect date filters if present
     h.tasks.forEach((t) => {
+      const taskDate = new Date(t.createdAt);
+      if (filters?.startDate && taskDate < filters.startDate) return;
+      if (filters?.endDate && taskDate > filters.endDate) return;
+
       tasksByType[t.taskType] = (tasksByType[t.taskType] || 0) + 1;
       tasksByStatus[t.status] = (tasksByStatus[t.status] || 0) + 1;
     });
@@ -275,6 +341,49 @@ export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
 
     const latestMaint = h.maintenanceRecords[0] || null;
 
+    // Determine truly latest condition from Inspections or Task Executions
+    const latestInspectionRec = h.inspections[0] || null;
+    const latestTaskExec = h.tasks[0]?.executions[0] || null;
+
+    let latestCondition: string | null = null;
+    let latestInspection: {
+      date: string;
+      condition: string;
+      remarks: string | null;
+    } | null = null;
+
+    if (latestInspectionRec && latestTaskExec) {
+      if (new Date(latestInspectionRec.inspectionDate) >= new Date(latestTaskExec.createdAt)) {
+        latestCondition = latestInspectionRec.condition;
+        latestInspection = {
+          date: String(latestInspectionRec.inspectionDate),
+          condition: latestInspectionRec.condition,
+          remarks: latestInspectionRec.remarks,
+        };
+      } else {
+        latestCondition = latestTaskExec.condition;
+        latestInspection = {
+          date: String(latestTaskExec.createdAt),
+          condition: latestTaskExec.condition,
+          remarks: latestTaskExec.remarks,
+        };
+      }
+    } else if (latestInspectionRec) {
+      latestCondition = latestInspectionRec.condition;
+      latestInspection = {
+        date: String(latestInspectionRec.inspectionDate),
+        condition: latestInspectionRec.condition,
+        remarks: latestInspectionRec.remarks,
+      };
+    } else if (latestTaskExec) {
+      latestCondition = latestTaskExec.condition;
+      latestInspection = {
+        date: String(latestTaskExec.createdAt),
+        condition: latestTaskExec.condition,
+        remarks: latestTaskExec.remarks,
+      };
+    }
+
     return {
       holdingId: h.id,
       code: h.code,
@@ -283,19 +392,20 @@ export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
       status: h.status,
       illumination: h.illumination,
       totalArea: Number(h.totalArea),
-      totalTasks: h.tasks.length,
+      totalTasks: Object.values(tasksByType).reduce((a, b) => a + b, 0),
       tasksByType,
       tasksByStatus,
       latestMaintenance: latestMaint
         ? {
-            date: String(latestMaint.performedDate),
-            type: latestMaint.maintenanceType,
-            status: latestMaint.status,
-            cost: Number(latestMaint.cost),
-            performedBy: latestMaint.performedBy,
-          }
+          date: String(latestMaint.performedDate),
+          type: latestMaint.maintenanceType,
+          status: latestMaint.status,
+          cost: Number(latestMaint.cost),
+          performedBy: latestMaint.performedBy,
+        }
         : null,
-      latestCondition: h.inspections[0]?.condition ?? null,
+      latestCondition,
+      latestInspection,
       revenue,
     };
   });
@@ -305,11 +415,31 @@ export async function getHoldingsSummary(): Promise<HoldingSummary[]> {
 // MAINTENANCE REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function getRecentMaintenanceRecords(): Promise<
+export async function getRecentMaintenanceRecords(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<
   MaintenanceRecordItem[]
 > {
+  const searchFilter = filters?.search
+    ? {
+      holding: {
+        OR: [
+          { code: { contains: filters.search, mode: "insensitive" as const } },
+          { name: { contains: filters.search, mode: "insensitive" as const } },
+        ],
+      },
+    }
+    : {};
+
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
   const records = await prisma.maintenanceRecord.findMany({
-    take: 20,
+    where: {
+      ...searchFilter,
+      ...(Object.keys(dateFilter).length > 0 ? { performedDate: dateFilter } : {}),
+    },
+    take: 50, // Increased take due to filtering
     orderBy: { performedDate: "desc" },
     include: {
       holding: { select: { code: true, name: true } },
@@ -329,17 +459,35 @@ export async function getRecentMaintenanceRecords(): Promise<
   }));
 }
 
-export async function getUpcomingMaintenance(): Promise<
+export async function getUpcomingMaintenance(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<
   UpcomingMaintenance[]
 > {
   const now = new Date();
+
+  const searchFilter = filters?.search
+    ? {
+      holding: {
+        OR: [
+          { code: { contains: filters.search, mode: "insensitive" as const } },
+          { name: { contains: filters.search, mode: "insensitive" as const } },
+        ],
+      },
+    }
+    : {};
+
+  const dateFilter = {
+    gte: filters?.startDate && filters.startDate > now ? filters.startDate : now,
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
   const tasks = await prisma.task.findMany({
     where: {
       taskType: "MAINTENANCE",
       status: { in: ["PENDING", "IN_PROGRESS"] },
-      scheduledDate: { gte: now },
+      scheduledDate: dateFilter,
+      ...searchFilter,
     },
-    take: 20,
+    take: 50,
     orderBy: { scheduledDate: "asc" },
     include: {
       holding: { select: { code: true, name: true } },
@@ -358,16 +506,19 @@ export async function getUpcomingMaintenance(): Promise<
   }));
 }
 
-export async function getMaintenanceMonthlyCosts(): Promise<
+export async function getMaintenanceMonthlyCosts(filters?: { startDate?: Date; endDate?: Date }): Promise<
   MaintenanceMonthlyCost[]
 > {
-  // Get last 12 months of maintenance costs
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  // Get last 12 months of maintenance costs OR within filtered range
+  const defaultStartDate = new Date();
+  defaultStartDate.setMonth(defaultStartDate.getMonth() - 12);
+
+  const startDate = filters?.startDate || defaultStartDate;
+  const endDateFilter = filters?.endDate ? { lte: filters.endDate } : {};
 
   const records = await prisma.maintenanceRecord.findMany({
     where: {
-      performedDate: { gte: twelveMonthsAgo },
+      performedDate: { gte: startDate, ...endDateFilter },
       status: { not: "CANCELLED" },
     },
     select: { performedDate: true, cost: true },
@@ -395,8 +546,21 @@ export async function getMaintenanceMonthlyCosts(): Promise<
 // TASK REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function getTaskTypeCounts(): Promise<TaskTypeCount[]> {
+export async function getTaskTypeCounts(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<TaskTypeCount[]> {
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
+  const searchFilter = filters?.search
+    ? { title: { contains: filters.search, mode: "insensitive" as const } }
+    : {};
+
   const tasks = await prisma.task.findMany({
+    where: {
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+      ...searchFilter,
+    },
     select: { taskType: true, status: true },
   });
 
@@ -419,11 +583,28 @@ export async function getTaskTypeCounts(): Promise<TaskTypeCount[]> {
   }));
 }
 
-export async function getTaskCompletionMetrics(): Promise<
+export async function getTaskCompletionMetrics(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<
   TaskCompletionMetrics[]
 > {
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+  const completedDateFilter = {
+    not: null,
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
+  const searchFilter = filters?.search
+    ? { title: { contains: filters.search, mode: "insensitive" as const } }
+    : {};
+
   const tasks = await prisma.task.findMany({
-    where: { completedDate: { not: null } },
+    where: {
+      completedDate: completedDateFilter,
+      ...searchFilter,
+    },
     select: { taskType: true, scheduledDate: true, completedDate: true },
   });
 
@@ -452,6 +633,10 @@ export async function getTaskCompletionMetrics(): Promise<
   // Also get total tasks per type
   const allTasks = await prisma.task.groupBy({
     by: ["taskType"],
+    where: {
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+      ...searchFilter,
+    },
     _count: true,
   });
 
@@ -460,21 +645,32 @@ export async function getTaskCompletionMetrics(): Promise<
     avgCompletionDays:
       map[t.taskType]?.completed > 0
         ? Number(
-            (
-              map[t.taskType].totalDays / map[t.taskType].completed
-            ).toFixed(1)
-          )
+          (
+            map[t.taskType].totalDays / map[t.taskType].completed
+          ).toFixed(1)
+        )
         : 0,
     totalTasks: t._count,
     completedTasks: map[t.taskType]?.completed ?? 0,
   }));
 }
 
-export async function getTaskCostVariance(): Promise<TaskCostVariance[]> {
+export async function getTaskCostVariance(filters?: { startDate?: Date; endDate?: Date; search?: string }): Promise<TaskCostVariance[]> {
+  const dateFilter = {
+    ...(filters?.startDate ? { gte: filters.startDate } : {}),
+    ...(filters?.endDate ? { lte: filters.endDate } : {}),
+  };
+
+  const searchFilter = filters?.search
+    ? { title: { contains: filters.search, mode: "insensitive" as const } }
+    : {};
+
   const tasks = await prisma.task.findMany({
     where: {
       estimatedCost: { not: null },
       actualCost: { not: null },
+      ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+      ...searchFilter,
     },
     select: { taskType: true, estimatedCost: true, actualCost: true },
   });
@@ -499,11 +695,11 @@ export async function getTaskCostVariance(): Promise<TaskCostVariance[]> {
     variancePercent:
       data.estimated > 0
         ? Number(
-            (
-              ((data.actual - data.estimated) / data.estimated) *
-              100
-            ).toFixed(1)
-          )
+          (
+            ((data.actual - data.estimated) / data.estimated) *
+            100
+          ).toFixed(1)
+        )
         : 0,
     taskCount: data.count,
   }));

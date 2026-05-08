@@ -41,7 +41,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(receipt);
+    const settings = await prisma.companySettings.findFirst();
+
+    return NextResponse.json({ ...receipt, settings });
   } catch (error) {
     console.error("[GET /api/receipts/[id]/print]", error);
     return NextResponse.json(

@@ -25,3 +25,23 @@ export const getCurrentLocation = (): Promise<{ latitude: number; longitude: num
         );
     });
 };
+
+/**
+ * Fetches a human-readable address from coordinates using Nominatim API.
+ * 
+ * @param latitude The latitude coordinate
+ * @param longitude The longitude coordinate
+ * @returns A promise that resolves to the formatted address string or null if it fails
+ */
+export const getAddressFromCoordinates = async (latitude: number, longitude: number): Promise<string | null> => {
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+        if (!response.ok) return null;
+        
+        const data = await response.json();
+        return data.display_name || null;
+    } catch (error) {
+        console.error("Reverse geocoding failed", error);
+        return null;
+    }
+};

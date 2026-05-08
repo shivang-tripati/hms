@@ -24,7 +24,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { locationSuggestionSchema, type LocationSuggestionFormData } from "@/lib/validations";
+import { locationSuggestionSchema, type LocationSuggestionFormData, type SuggestionPhoto } from "@/lib/validations";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
@@ -37,7 +37,7 @@ interface SuggestionFormProps {
         address: string;
         cityId: string;
         description: string | null;
-        photos: string[];
+        photos: SuggestionPhoto[];
         latitude: any;
         longitude: any;
         landmark: string | null;

@@ -20,7 +20,7 @@ export default async function NewReceiptPage() {
             OR: [{ isCash: true }, { isBank: true }],
             isGroup: false,
         },
-        select: { id: true, name: true },
+        select: { id: true, name: true, isCash: true, isBank: true },
         orderBy: { name: "asc" },
     });
 

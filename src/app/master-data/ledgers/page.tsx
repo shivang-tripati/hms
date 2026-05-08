@@ -118,12 +118,12 @@ export default async function LedgersPage() {
         <div className="space-y-6">
             <PageHeader
                 title="Chart of Accounts"
-                description="Manage your ledger hierarchy for double-entry accounting"
+                description="Manage your accounts hierarchy for double-entry accounting"
             >
                 <Link href="/master-data/ledgers/new">
                     <Button>
                         <Plus className="h-4 w-4 mr-2" />
-                        Add Ledger
+                        Add Account
                     </Button>
                 </Link>
             </PageHeader>
@@ -144,7 +144,7 @@ export default async function LedgersPage() {
                                 <div className="px-4 py-3 border-b bg-muted/30 rounded-t-xl">
                                     <h2 className="font-semibold text-sm flex items-center gap-2">
                                         <Badge className={typeColors[type]}>{type}</Badge>
-                                        <span className="text-muted-foreground text-xs">({typeLedgers.length} root ledgers)</span>
+                                        <span className="text-muted-foreground text-xs">({typeLedgers.length} root accounts)</span>
                                     </h2>
                                 </div>
                                 <div className="p-2">

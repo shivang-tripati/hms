@@ -50,7 +50,9 @@ export default async function PaymentsPage() {
                                     <tr key={p.id} className="border-b hover:bg-muted/30 transition-colors">
                                         <td className="p-3 font-mono text-xs">{p.paymentNumber}</td>
                                         <td className="p-3">{format(new Date(p.paymentDate), "dd MMM yyyy")}</td>
-                                        <td className="p-3 font-medium">{p.vendor?.name}</td>
+                                        <td className="p-3 font-medium">
+                                            {p.vendor?.name || p.liabilityLedger?.name || "—"}
+                                        </td>
                                         <td className="p-3 text-right font-mono font-semibold">
                                             ₹ {Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                         </td>

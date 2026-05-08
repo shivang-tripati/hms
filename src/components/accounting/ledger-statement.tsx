@@ -89,6 +89,23 @@ export function LedgerStatement({ ledgerId }: { ledgerId: string }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const [settings, setSettings] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch("/api/settings");
+                if (res.ok) {
+                    const data = await res.json();
+                    setSettings(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch settings", err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
     const fetchStatement = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -147,16 +164,106 @@ export function LedgerStatement({ ledgerId }: { ledgerId: string }) {
 
     const { rows, totalDebit, totalCredit, closingBalance } = computeRows();
 
+    // Automatically switch to light mode during print to prevent dark theme from bleeding into the document
+    useEffect(() => {
+        const mediaQueryList = window.matchMedia("print");
+        
+        const handlePrintMediaChange = (mql: MediaQueryListEvent | MediaQueryList) => {
+            const html = document.documentElement;
+            if (mql.matches) {
+                // Before print: temporarily remove dark class
+                if (html.classList.contains("dark")) {
+                    html.dataset.wasDark = "true";
+                    html.classList.remove("dark");
+                }
+            } else {
+                // After print: restore dark class if it was present
+                if (html.dataset.wasDark === "true") {
+                    html.classList.add("dark");
+                    delete html.dataset.wasDark;
+                }
+            }
+        };
+
+        // Modern browsers
+        if (mediaQueryList.addEventListener) {
+            mediaQueryList.addEventListener("change", handlePrintMediaChange);
+        } else {
+            // Fallback for older browsers
+            mediaQueryList.addListener(handlePrintMediaChange);
+        }
+
+        return () => {
+            if (mediaQueryList.removeEventListener) {
+                mediaQueryList.removeEventListener("change", handlePrintMediaChange);
+            } else {
+                mediaQueryList.removeListener(handlePrintMediaChange);
+            }
+        };
+    }, []);
+
     const handlePrint = () => {
+        // Triggering window.print() will automatically fire the matchMedia listener above
         window.print();
     };
 
     return (
-        <div className="space-y-6">
+        <div id="print-wrapper" className="space-y-6">
+            <style jsx global>{`
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        /* margin: 0 hides the default browser headers and footers (URL, Date, Page Number) */
+                        margin: 0;
+                    }
+                    body {
+                        background: white !important;
+                        color: black !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    /* Add padding to the printable area to compensate for margin: 0 */
+                    #print-wrapper {
+                        padding: 15mm;
+                    }
+                    /* Hide navigation and UI elements */
+                    .print\\:hidden, .action-bar, button, .back-btn, nav, aside, header, footer {
+                        display: none !important;
+                    }
+                    /* Reset container heights and overflow to allow proper pagination */
+                    html, body, main, .h-screen, .min-h-screen, .h-full {
+                        height: auto !important;
+                        min-height: auto !important;
+                    }
+                    .overflow-hidden, .overflow-x-auto, .overflow-y-auto {
+                        overflow: visible !important;
+                    }
+                    .bg-card {
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                    table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                    }
+                    th, td {
+                        border: 1px solid #e5e7eb !important;
+                        padding: 8px 12px !important;
+                    }
+                    th {
+                        background-color: #f9fafb !important;
+                        font-weight: 600 !important;
+                        color: #111827 !important;
+                    }
+                    tr {
+                        page-break-inside: avoid;
+                    }
+                }
+            `}</style>
             {/* ── Header ──────────────────────────────────────────────── */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between print:hidden">
                 <div className="flex items-center gap-3">
-                    <Link href="/master-data/ledgers">
+                    <Link href="/accounting/ledgers">
                         <Button variant="ghost" size="sm">
                             <ArrowLeft className="h-4 w-4 mr-1" />
                             Back
@@ -247,16 +354,38 @@ export function LedgerStatement({ ledgerId }: { ledgerId: string }) {
 
             {/* ── Statement Table ─────────────────────────────────────── */}
             {!loading && data && (
-                <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
+                <div className="bg-card rounded-xl border shadow-sm overflow-hidden print:overflow-visible print:border-none print:shadow-none">
                     {/* Print header (visible only in print) */}
-                    <div className="hidden print:block p-6 border-b">
-                        <h2 className="text-xl font-bold">{data.ledger.name} ({data.ledger.code})</h2>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Ledger Statement: {format(new Date(startDate), "dd MMM yyyy")} to {format(new Date(endDate), "dd MMM yyyy")}
-                        </p>
+                    <div className="hidden print:block p-6 border-b print:px-0">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex gap-4 items-start">
+                                {settings?.logoUrl && (
+                                    <img 
+                                        src={settings.logoUrl} 
+                                        alt="Logo" 
+                                        className="h-12 w-auto object-contain"
+                                    />
+                                )}
+                                <div>
+                                    <h1 className="text-2xl font-bold">{settings?.companyName || "Supreme Media Advertising"}</h1>
+                                    <p className="text-sm text-muted-foreground">{settings?.tagline || "Creative • Innovative • Positive"}</p>
+                                </div>
+                            </div>
+                            <div className="text-right text-xs">
+                                <p>{settings?.address}</p>
+                                <p>{settings?.phone}</p>
+                                <p>{settings?.website}</p>
+                            </div>
+                        </div>
+                        <div className="border-t pt-4">
+                            <h2 className="text-xl font-bold">{data.ledger.name} ({data.ledger.code})</h2>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Ledger Statement: {format(new Date(startDate), "dd MMM yyyy")} to {format(new Date(endDate), "dd MMM yyyy")}
+                            </p>
+                        </div>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto print:overflow-visible">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b bg-muted/30">

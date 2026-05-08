@@ -32,11 +32,24 @@ export const authConfig = {
             // Role-based access control for STAFF
             const role = (auth.user as any)?.role;
             if (isLoggedIn && role === "STAFF") {
-                const allowedPaths = ["/", "/tasks", "/suggestions", "/api"];
-                const isAllowed = allowedPaths.some(path =>
-                    nextUrl.pathname === path || nextUrl.pathname.startsWith(path)
-                );
-                if (!isAllowed) return Response.redirect(new URL("/", nextUrl));
+                const allowedPagePaths = ["/", "/tasks", "/suggestions"];
+                const allowedApiPaths = ["/api/auth", "/api/tasks", "/api/suggestions", "/api/dashboard/staff"];
+                
+                if (pathname.startsWith("/api")) {
+                    const isAllowedApi = allowedApiPaths.some(path => 
+                        pathname === path || pathname.startsWith(path + "/")
+                    );
+                    if (!isAllowedApi) {
+                        return Response.json({ error: "Forbidden" }, { status: 403 });
+                    }
+                } else {
+                    const isAllowedPage = allowedPagePaths.some(path => 
+                        path === "/" ? pathname === "/" : (pathname === path || pathname.startsWith(path + "/"))
+                    );
+                    if (!isAllowedPage) {
+                        return Response.redirect(new URL("/", nextUrl));
+                    }
+                }
             }
 
             return true;

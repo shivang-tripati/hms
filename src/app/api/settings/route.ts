@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 export async function GET() {
   try {
     let settings = await prisma.companySettings.findFirst();
-    
+
     if (!settings) {
       settings = await prisma.companySettings.create({
         data: {
@@ -44,9 +44,10 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const data = await request.json();
-    
+    console.log("this is setting  data", data);
+
     let settings = await prisma.companySettings.findFirst();
-    
+
     if (settings) {
       settings = await prisma.companySettings.update({
         where: { id: settings.id },
@@ -60,6 +61,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json(settings);
   } catch (error: any) {
+    console.log("this is error", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

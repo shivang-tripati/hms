@@ -1,6 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
+import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,7 @@ interface AdvertisementFormProps {
     bookings: (Booking & {
         client: { name: string };
         holding: { name: string; code: string };
+        advertisements: { id: string; removalDate: Date | null; status: string }[];
     })[];
 }
 
@@ -84,6 +86,23 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
         resolver: zodResolver(advertisementSchema) as any,
         defaultValues: defaultValues as any,
     });
+
+    const watchedBookingId = form.watch("bookingId");
+
+    const activeAdWarning = useMemo(() => {
+        if (!watchedBookingId || initialData) return null; // Only for new ads
+        const selectedBooking = bookings.find(b => b.id === watchedBookingId);
+        if (!selectedBooking) return null;
+
+        const latestAd = [...selectedBooking.advertisements]
+            .filter(ad => ad.removalDate)
+            .sort((a, b) => new Date(b.removalDate!).getTime() - new Date(a.removalDate!).getTime())[0];
+
+        if (latestAd && latestAd.removalDate && new Date(latestAd.removalDate) > new Date()) {
+            return `Cannot create new advertisement. Previous advertisement for this booking is scheduled to be removed on ${format(new Date(latestAd.removalDate), "PPP")}.`;
+        }
+        return null;
+    }, [watchedBookingId, bookings, initialData]);
 
     const onSubmit = async (data: AdvertisementFormData) => {
         try {
@@ -136,6 +155,9 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
                                     Links this ad to a confirmed booking.
                                 </FormDescription>
                                 <FormMessage />
+                                {activeAdWarning && (
+                                    <p className="text-sm font-medium text-destructive mt-2">{activeAdWarning}</p>
+                                )}
                             </FormItem>
                         )}
                     />
@@ -327,7 +349,7 @@ export function AdvertisementForm({ initialData, bookings }: AdvertisementFormPr
                     <Button variant="outline" type="button" onClick={() => router.back()}>
                         Cancel
                     </Button>
-                    <Button type="submit">
+                    <Button type="submit" disabled={!!activeAdWarning}>
                         {initialData ? "Update Advertisement" : "Create Advertisement"}
                     </Button>
                 </div>

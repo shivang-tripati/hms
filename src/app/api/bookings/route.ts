@@ -25,9 +25,20 @@ export async function GET() {
         const bookings = await prisma.booking.findMany({
             orderBy: { createdAt: "desc" },
             include: {
-                client: true,
-                holding: true,
-                advertisements: { select: { id: true, campaignName: true, brandName: true, status: true } },
+                client: {
+                    include: {
+                        city: true,
+                    },
+                },
+                holding: {
+                    include: {
+                        city: true,
+                        hsnCode: true,
+
+
+                    },
+                },
+                advertisements: { select: { id: true, campaignName: true, brandName: true, status: true, removalDate: true } },
             },
         });
         return NextResponse.json(bookings);
@@ -53,7 +64,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const booking = await prisma.booking.create({ data: parsed });
+        const booking = await prisma.booking.create({
+            data: {
+                ...parsed,
+                status: "CONFIRMED",
+            }
+        });
 
         await prisma.holding.update({
             where: { id: parsed.holdingId },

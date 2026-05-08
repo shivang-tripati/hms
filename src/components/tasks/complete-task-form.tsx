@@ -186,7 +186,7 @@ export function CompleteTaskForm({ taskId }: CompleteTaskFormProps) {
                                     label="Front View"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    error={form.formState.errors.frontViewUrl?.message}
+                                    error={form.formState.errors.frontViewUrl?.message as string | undefined}
                                 />
                             )}
                         />
@@ -198,7 +198,7 @@ export function CompleteTaskForm({ taskId }: CompleteTaskFormProps) {
                                     label="Left View"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    error={form.formState.errors.leftViewUrl?.message}
+                                    error={form.formState.errors.leftViewUrl?.message as string | undefined}
                                 />
                             )}
                         />
@@ -210,7 +210,7 @@ export function CompleteTaskForm({ taskId }: CompleteTaskFormProps) {
                                     label="Right View"
                                     value={field.value}
                                     onChange={field.onChange}
-                                    error={form.formState.errors.rightViewUrl?.message}
+                                    error={form.formState.errors.rightViewUrl?.message as string | undefined}
                                 />
                             )}
                         />

@@ -83,13 +83,34 @@ interface InvoiceFormProps {
             hsnCodeId: string;
             quantity: unknown;
             rate: unknown;
+            bookingId?: string | null;
         }>;
     };
-    clients: Client[];
+    clients: (Client & { city?: { state: string } })[];
     bookings: (Booking & {
-        client: { name: string };
-        holding: { code: string; name: string; hsnCodeId: string };
+        client: { name: string; city?: { state: string } };
+        holding: {
+            code: string;
+            name: string;
+            address: string;
+            width: any;
+            height: any;
+            hsnCodeId: string;
+            city?: { state: string };
+            hsnCode?: { gstRate: any; code: string };
+        };
     })[];
+    existingInvoices: Array<{
+        id: string;
+        bookingId: string;
+        items?: Array<{
+            bookingId?: string | null;
+        }>;
+        status: string;
+    }>;
+    settings?: {
+        state?: string;
+    };
 }
 
 function monthsInclusive(start: Date, end: Date): number {
@@ -119,8 +140,10 @@ function extractHoldingCodeFromDescription(desc: string): string {
     return (parts[parts.length - 1] ?? "").trim();
 }
 
-export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps) {
+export function InvoiceForm({ initialData, clients, bookings, existingInvoices, settings }: InvoiceFormProps) {
     const router = useRouter();
+    const isLocked = initialData?.status === "SENT";
+    const companyState = settings?.state || "Tripura";
 
     const defaultValues: InvoiceBuilderFormValues = initialData
         ? {
@@ -140,7 +163,8 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                 initialData.items && initialData.items.length > 0
                     ? initialData.items.map((row) => {
                         const code = extractHoldingCodeFromDescription(row.description);
-                        const b = bookings.find((bk) => bk.holding.code === code);
+                        const b = bookings.find((bk) => bk.id === row.bookingId)
+                            || bookings.find((bk) => bk.holding.code === code);
                         return {
                             lineType: inferLineTypeFromDescription(row.description),
                             bookingId: b?.id ?? initialData.bookingId,
@@ -184,10 +208,24 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
     const watchedCgst = form.watch("cgstRate");
     const watchedSgst = form.watch("sgstRate");
     const watchedIgst = form.watch("igstRate");
+    const isIgstMode = Number(watchedIgst || 0) > 0;
+
+    const billedBookingIds = useMemo(() => {
+        const ids = new Set<string>();
+        for (const inv of existingInvoices) {
+            if (inv.status === "CANCELLED") continue;
+            if (initialData && inv.id === initialData.id) continue;
+            ids.add(inv.bookingId);
+            for (const item of inv.items || []) {
+                if (item.bookingId) ids.add(item.bookingId);
+            }
+        }
+        return ids;
+    }, [existingInvoices, initialData]);
 
     const filteredBookings = useMemo(
-        () => bookings.filter((b) => b.clientId === watchedClientId),
-        [bookings, watchedClientId],
+        () => bookings.filter((b) => b.clientId === watchedClientId && !billedBookingIds.has(b.id)),
+        [bookings, watchedClientId, billedBookingIds],
     );
 
     const selectedBookings = useMemo(
@@ -195,18 +233,50 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
         [filteredBookings, watchedSelectedIds],
     );
 
+    const { isIntraState, isInterState } = useMemo(() => {
+        const firstBooking = filteredBookings.find((b) => watchedSelectedIds?.includes(b.id));
+        const client = clients.find(c => c.id === watchedClientId);
+        const clientState = client?.city?.state;
+        const holdingState = firstBooking?.holding?.city?.state;
+        const inter = !!(clientState && holdingState && clientState.toLowerCase() !== holdingState.toLowerCase());
+        const intra = !inter;
+        return { isIntraState: intra, isInterState: inter };
+    }, [filteredBookings, watchedSelectedIds, clients, watchedClientId]);
+
     useEffect(() => {
         const ids = watchedSelectedIds;
         if (ids && ids.length > 0) {
             form.setValue("bookingId", ids[0]);
             const first = filteredBookings.find((b) => b.id === ids[0]);
+
             if (first?.holding?.hsnCodeId) {
                 form.setValue("hsnCodeId", first.holding.hsnCodeId);
+
+                // Auto-calculate GST based on state comparison
+                const client = clients.find(c => c.id === watchedClientId);
+                const holding = first.holding;
+                const totalGst = Number(holding.hsnCode?.gstRate ?? 18);
+
+                const clientState = client?.city?.state;
+
+                if (!initialData) {
+                    if (companyState && clientState && companyState.toLowerCase() !== clientState.toLowerCase()) {
+                        // Inter-state: IGST
+                        form.setValue("cgstRate", 0);
+                        form.setValue("sgstRate", 0);
+                        form.setValue("igstRate", totalGst);
+                    } else {
+                        // Intra-state: CGST + SGST (default)
+                        form.setValue("cgstRate", totalGst / 2);
+                        form.setValue("sgstRate", totalGst / 2);
+                        form.setValue("igstRate", 0);
+                    }
+                }
             }
         } else {
             form.setValue("bookingId", "");
         }
-    }, [watchedSelectedIds, filteredBookings, form]);
+    }, [watchedSelectedIds, filteredBookings, form, watchedClientId, clients, initialData]);
 
     useEffect(() => {
         if (!initialData && !form.getValues("invoiceNumber")) {
@@ -227,6 +297,32 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
             form.setValue("selectedBookingIds", [...ids]);
         }
     }, [initialData, bookings, form]);
+
+    useEffect(() => {
+        if (isLocked) return;
+
+        if (isInterState) {
+            const cgst = Number(form.getValues("cgstRate") || 0);
+            const sgst = Number(form.getValues("sgstRate") || 0);
+            const igst = Number(form.getValues("igstRate") || 0);
+            if (cgst !== 0 || sgst !== 0) {
+                const nextIgst = igst > 0 ? igst : cgst + sgst;
+                form.setValue("igstRate", nextIgst);
+                form.setValue("cgstRate", 0);
+                form.setValue("sgstRate", 0);
+            }
+            return;
+        }
+
+        if (isIntraState) {
+            const igst = Number(form.getValues("igstRate") || 0);
+            const cgst = Number(form.getValues("cgstRate") || 0);
+            const sgst = Number(form.getValues("sgstRate") || 0);
+
+            if (igst !== 0) form.setValue("igstRate", 0);
+            if (sgst !== cgst) form.setValue("sgstRate", cgst);
+        }
+    }, [isIntraState, isInterState, isLocked, form]);
 
     const previewTotals = useMemo(() => {
         const rows = watchedItems || [];
@@ -252,6 +348,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
     }, [watchedItems, watchedCgst, watchedSgst, watchedIgst]);
 
     const addRow = (type: LineType = "RENT") => {
+        if (isLocked) return;
         const pool = selectedBookings.length > 0 ? selectedBookings : filteredBookings;
         const b = pool[0];
         if (!b) {
@@ -283,6 +380,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
     };
 
     const applyLineTypeDefaults = (index: number, type: LineType) => {
+        if (isLocked) return;
         const bId = form.getValues(`items.${index}.bookingId`);
         const b =
             filteredBookings.find((x) => x.id === bId) ||
@@ -381,6 +479,11 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-6">
                     <div>
+                        {isLocked && (
+                            <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+                                This invoice is in Sent status and is locked for edits.
+                            </p>
+                        )}
                         <h3 className="text-sm font-semibold mb-3">1. Client & bookings</h3>
                         <div className="grid gap-4 md:grid-cols-2">
                             <FormField
@@ -396,6 +499,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                 form.setValue("items", []);
                                             }}
                                             value={field.value || undefined}
+                                            disabled={isLocked}
                                         >
                                             <FormControl>
                                                 <SelectTrigger>
@@ -443,6 +547,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                         >
                                             <Checkbox
                                                 checked={watchedSelectedIds?.includes(b.id)}
+                                                disabled={isLocked}
                                                 onCheckedChange={(checked) => {
                                                     const cur = new Set(watchedSelectedIds || []);
                                                     if (checked) cur.add(b.id);
@@ -454,7 +559,11 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                 <span className="font-medium">{b.bookingNumber}</span>
                                                 <span className="text-muted-foreground">
                                                     {" "}
-                                                    — {b.holding.code} ({b.holding.name})
+                                                    — {b.holding.code} ({b.holding.name}) · {Number(b.holding.width)}x{Number(b.holding.height)}
+                                                </span>
+                                                <br />
+                                                <span className="text-xs text-muted-foreground italic">
+                                                    {b.holding.address}
                                                 </span>
                                                 <br />
                                                 <span className="text-xs text-muted-foreground">
@@ -476,17 +585,22 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                             <h3 className="text-sm font-semibold">2. Line items</h3>
                             <div className="flex flex-wrap gap-2">
-                                <Button type="button" variant="outline" size="sm" onClick={() => addRow("RENT")}>
+                                <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={() => addRow("RENT")}>
                                     <Plus className="h-4 w-4 mr-1" /> Rent
                                 </Button>
-                                {/* <Button type="button" variant="outline" size="sm" onClick={() => addRow("MOUNTING")}>
+                                <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={() => addRow("MOUNTING")}>
                                     <Plus className="h-4 w-4 mr-1" /> Mounting
-                                </Button> */}
-                                <Button type="button" variant="outline" size="sm" onClick={() => addRow("EXTRA_MOUNTING")}>
+                                </Button>
+                                <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={() => addRow("EXTRA_MOUNTING")}>
                                     <Plus className="h-4 w-4 mr-1" /> Extra mounting
                                 </Button>
                             </div>
                         </div>
+                        {watchedClientId && filteredBookings.length === 0 && (
+                            <p className="text-sm text-muted-foreground border rounded-lg p-4">
+                                No billable bookings available for this client. Already billed bookings are hidden.
+                            </p>
+                        )}
 
                         {fields.length === 0 ? (
                             <p className="text-sm text-muted-foreground border rounded-lg p-6 text-center">
@@ -497,7 +611,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                 {fields.map((field, index) => (
                                     <div
                                         key={field.id}
-                                        className="grid gap-3 md:grid-cols-12 items-end border rounded-lg p-3 bg-muted/20"
+                                        className="grid gap-4 grid-cols-1 md:grid-cols-12 items-end border rounded-xl p-4 md:p-3 bg-muted/20 shadow-sm"
                                     >
                                         <div className="md:col-span-2">
                                             <FormField
@@ -508,6 +622,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                         <FormLabel className="text-xs">Type</FormLabel>
                                                         <Select
                                                             value={f.value}
+                                                            disabled={isLocked}
                                                             onValueChange={(v) => {
                                                                 f.onChange(v as LineType);
                                                                 applyLineTypeDefaults(index, v as LineType);
@@ -520,7 +635,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                             </FormControl>
                                                             <SelectContent>
                                                                 <SelectItem value="RENT">Hoarding rent</SelectItem>
-                                                                {/* <SelectItem value="MOUNTING">Mounting</SelectItem> */}
+                                                                <SelectItem value="MOUNTING">Mounting</SelectItem>
                                                                 <SelectItem value="EXTRA_MOUNTING">Extra mounting</SelectItem>
                                                             </SelectContent>
                                                         </Select>
@@ -537,6 +652,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                         <FormLabel className="text-xs">Booking / hoarding</FormLabel>
                                                         <Select
                                                             value={f.value}
+                                                            disabled={isLocked}
                                                             onValueChange={(v) => {
                                                                 f.onChange(v);
                                                                 const t = form.getValues(`items.${index}.lineType`);
@@ -555,7 +671,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                                     : filteredBookings
                                                                 ).map((b) => (
                                                                     <SelectItem key={b.id} value={b.id}>
-                                                                        {b.holding.code} — {b.holding.name}
+                                                                        {b.holding.code} — {b.holding.name} ({Number(b.holding.width)}x{Number(b.holding.height)})
                                                                     </SelectItem>
                                                                 ))}
                                                             </SelectContent>
@@ -576,6 +692,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                                 type="number"
                                                                 step="0.01"
                                                                 {...f}
+                                                                disabled={isLocked}
                                                                 onChange={(e) =>
                                                                     f.onChange(parseFloat(e.target.value) || 0)
                                                                 }
@@ -597,6 +714,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                                 type="number"
                                                                 step="0.01"
                                                                 {...f}
+                                                                disabled={isLocked}
                                                                 onChange={(e) =>
                                                                     f.onChange(parseFloat(e.target.value) || 0)
                                                                 }
@@ -607,7 +725,11 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             />
                                         </div>
                                         <div className="md:col-span-2 text-sm flex flex-col justify-end pb-2">
-                                            <span className="text-muted-foreground text-xs">Line taxable</span>
+                                            <span className="text-muted-foreground text-xs">
+                                                HSN: {
+                                                    bookings.find(b => b.id === form.watch(`items.${index}.bookingId`))?.holding?.hsnCode?.code || "—"
+                                                }
+                                            </span>
                                             <span className="font-medium">
                                                 ₹
                                                 {(
@@ -622,6 +744,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                                 variant="ghost"
                                                 size="icon"
                                                 className="text-destructive"
+                                                disabled={isLocked}
                                                 onClick={() => remove(index)}
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -645,6 +768,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             <FormControl>
                                                 <Button
                                                     variant="outline"
+                                                    disabled={isLocked}
                                                     className={cn(
                                                         "w-full pl-3 text-left font-normal",
                                                         !field.value && "text-muted-foreground",
@@ -656,7 +780,11 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={isLocked ? undefined : field.onChange}
+                                            />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -674,6 +802,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             <FormControl>
                                                 <Button
                                                     variant="outline"
+                                                    disabled={isLocked}
                                                     className={cn(
                                                         "w-full pl-3 text-left font-normal",
                                                         !field.value && "text-muted-foreground",
@@ -685,7 +814,11 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             </FormControl>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={isLocked ? undefined : field.onChange}
+                                            />
                                         </PopoverContent>
                                     </Popover>
                                     <FormMessage />
@@ -707,7 +840,15 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             <Input
                                                 type="number"
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                                disabled={isLocked || isInterState || isIgstMode}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    field.onChange(val);
+                                                    form.setValue("sgstRate", val);
+                                                    if (val > 0) {
+                                                        form.setValue("igstRate", 0);
+                                                    }
+                                                }}
                                             />
                                         </FormControl>
                                     </FormItem>
@@ -723,7 +864,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             <Input
                                                 type="number"
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                                disabled
                                             />
                                         </FormControl>
                                     </FormItem>
@@ -739,7 +880,15 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                             <Input
                                                 type="number"
                                                 {...field}
-                                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                                disabled={isLocked || isIntraState}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    field.onChange(val);
+                                                    if (val > 0) {
+                                                        form.setValue("cgstRate", 0);
+                                                        form.setValue("sgstRate", 0);
+                                                    }
+                                                }}
                                             />
                                         </FormControl>
                                     </FormItem>
@@ -755,14 +904,23 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                 <p className="text-xs text-muted-foreground">Taxable subtotal</p>
                                 <p className="font-semibold">₹ {previewTotals.subtotal.toFixed(2)}</p>
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">CGST</p>
-                                <p className="font-semibold">₹ {previewTotals.cgst.toFixed(2)}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">SGST</p>
-                                <p className="font-semibold">₹ {previewTotals.sgst.toFixed(2)}</p>
-                            </div>
+                            {isInterState ? (
+                                <div>
+                                    <p className="text-xs text-muted-foreground">IGST</p>
+                                    <p className="font-semibold">₹ {previewTotals.igst.toFixed(2)}</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">CGST</p>
+                                        <p className="font-semibold">₹ {previewTotals.cgst.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">SGST</p>
+                                        <p className="font-semibold">₹ {previewTotals.sgst.toFixed(2)}</p>
+                                    </div>
+                                </>
+                            )}
                             <div>
                                 <p className="text-xs text-muted-foreground">Grand total</p>
                                 <p className="text-lg font-bold text-primary">₹ {previewTotals.total.toFixed(2)}</p>
@@ -777,7 +935,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Status</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={isLocked}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue />
@@ -802,7 +960,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                                 <FormItem className="md:col-span-2">
                                     <FormLabel>Notes</FormLabel>
                                     <FormControl>
-                                        <Textarea {...field} value={field.value || ""} />
+                                        <Textarea {...field} value={field.value || ""} disabled={isLocked} />
                                     </FormControl>
                                 </FormItem>
                             )}
@@ -814,7 +972,7 @@ export function InvoiceForm({ initialData, clients, bookings }: InvoiceFormProps
                     <Button variant="outline" type="button" onClick={() => router.back()}>
                         Cancel
                     </Button>
-                    <Button type="submit">{initialData ? "Update Invoice" : "Create Invoice"}</Button>
+                    <Button type="submit" disabled={isLocked}>{initialData ? "Update Invoice" : "Create Invoice"}</Button>
                 </div>
             </form>
         </Form>

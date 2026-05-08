@@ -24,10 +24,31 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = locationSuggestionSchema.parse(body);
 
+        const { photos, ...rest } = parsed;
+
+        const suggestionPhotosData = (photos || []).map((img: any) => {
+            if (typeof img === "object" && img !== null) {
+                return {
+                    url: img.url,
+                    latitude: img.latitude || null,
+                    longitude: img.longitude || null,
+                    uploadedByUserName: session?.user?.name || "System",
+                    uploadedById: session?.user?.id || null,
+                };
+            }
+            return {
+                url: img,
+                uploadedByUserName: session?.user?.name || "System",
+                uploadedById: session?.user?.id || null,
+            };
+        });
+
         const suggestion = await prisma.locationSuggestion.create({
             data: {
-                ...parsed,
-                photos: parsed.photos || [],
+                ...rest,
+                photos: {
+                    create: suggestionPhotosData
+                },
             },
         });
 

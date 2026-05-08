@@ -38,8 +38,12 @@ const navigation = [
     { name: "Billing", href: "/billing", icon: FileText, roles: ["ADMIN"] },
     { name: "Journal Entries", href: "/accounting/journal-entries", icon: BookOpen, roles: ["ADMIN"] },
     { name: "Payments", href: "/accounting/payments", icon: CreditCard, roles: ["ADMIN"] },
+];
+
+const reportsSubmenus = [
     { name: "Analytics", href: "/reports/analytics", icon: BarChart3, roles: ["ADMIN"] },
-    { name: "Accounting Reports", href: "/reports/trial-balance", icon: BarChart3, roles: ["ADMIN"] },
+    { name: "Ledgers", href: "/accounting/ledgers", icon: Layers, roles: ["ADMIN"] },
+    { name: "Trial Balance", href: "/reports/trial-balance", icon: FileText, roles: ["ADMIN"] },
 ];
 
 const generalSettingsSubmenus = [
@@ -56,12 +60,17 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
 
     const filteredNavigation = navigation.filter(item => item.roles.includes(role));
     const filteredSettingsSubmenus = generalSettingsSubmenus.filter(item => item.roles.includes(role));
+    const filteredReportsSubmenus = reportsSubmenus.filter(item => item.roles.includes(role));
 
     const isGeneralSettingsActive = generalSettingsSubmenus.some(
-        item => item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+        item => pathname === item.href || (item.href !== "/master-data" && pathname.startsWith(item.href + "/"))
+    );
+    const isReportsActive = reportsSubmenus.some(
+        item => pathname === item.href || pathname.startsWith(item.href + "/")
     );
 
     const [settingsOpen, setSettingsOpen] = useState(isGeneralSettingsActive);
+    const [reportsOpen, setReportsOpen] = useState(isReportsActive);
 
     return (
         <div className={cn("flex flex-col h-full", className)}>
@@ -82,7 +91,7 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
                         const isActive =
                             item.href === "/"
                                 ? pathname === "/"
-                                : pathname.startsWith(item.href);
+                                : pathname === item.href || pathname.startsWith(item.href + "/");
 
                         return (
                             <Link
@@ -106,6 +115,73 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
                             </Link>
                         );
                     })}
+
+                    {/* Reports - Collapsible Group */}
+                    {filteredReportsSubmenus.length > 0 && (
+                        <div className="pt-1">
+                            <button
+                                onClick={() => setReportsOpen(!reportsOpen)}
+                                className={cn(
+                                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 w-full",
+                                    isReportsActive
+                                        ? "text-indigo-600 dark:text-indigo-400"
+                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                )}
+                            >
+                                <BarChart3
+                                    className={cn(
+                                        "h-4.5 w-4.5 shrink-0",
+                                        isReportsActive && "text-indigo-500"
+                                    )}
+                                />
+                                <span className="flex-1 text-left">Reports & Analytics</span>
+                                <ChevronDown
+                                    className={cn(
+                                        "h-4 w-4 shrink-0 transition-transform duration-200",
+                                        reportsOpen && "rotate-180"
+                                    )}
+                                />
+                            </button>
+
+                            <div
+                                className={cn(
+                                    "overflow-hidden transition-all duration-200",
+                                    reportsOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+                                )}
+                            >
+                                <div className="ml-3 pl-3 border-l border-border/50 space-y-0.5 mt-1">
+                                    {filteredReportsSubmenus.map((item) => {
+                                        const isActive =
+                                            item.href === "/"
+                                                ? pathname === "/"
+                                                : pathname === item.href || pathname.startsWith(item.href + "/");
+
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={onLinkClick}
+                                                className={cn(
+                                                    "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+                                                    isActive
+                                                        ? "bg-gradient-to-r from-indigo-500/15 to-purple-500/10 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                                                )}
+                                            >
+                                                <item.icon
+                                                    className={cn(
+                                                        "h-4 w-4 shrink-0",
+                                                        isActive && "text-indigo-500"
+                                                    )}
+                                                />
+                                                <span>{item.name}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* General Settings - Collapsible Group */}
                     {filteredSettingsSubmenus.length > 0 && (
@@ -145,7 +221,7 @@ export function SidebarContent({ className, onLinkClick }: { className?: string;
                                         const isActive =
                                             item.href === "/"
                                                 ? pathname === "/"
-                                                : pathname.startsWith(item.href);
+                                                : pathname === item.href || pathname.startsWith(item.href + "/");
 
                                         return (
                                             <Link

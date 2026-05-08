@@ -4,7 +4,10 @@ import { auth } from "@/auth";
 import { invoiceUpsertPayloadSchema } from "@/lib/validations";
 import { createInvoiceJournal } from "@/lib/accounting";
 import { buildPersistedLineItems, computeInvoiceHeaderTotals } from "@/lib/invoice-service";
-import { assertBookingsBelongToClient } from "@/app/api/invoices/_invoice-helpers";
+import {
+    assertBookingsBelongToClient,
+    assertBookingsNotAlreadyBilled,
+} from "@/app/api/invoices/_invoice-helpers";
 
 export async function GET() {
     try {
@@ -33,6 +36,11 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = invoiceUpsertPayloadSchema.parse(body);
         const { items, ...rest } = parsed;
+        const bookingIdsToValidate = [
+            parsed.bookingId,
+            ...(items?.map((row) => row.bookingId).filter(Boolean) as string[]),
+        ];
+        await assertBookingsNotAlreadyBilled(prisma, bookingIdsToValidate);
 
         let invoice;
 
@@ -63,7 +71,7 @@ export async function POST(request: NextRequest) {
                     clientId: rest.clientId,
                     bookingId: rest.bookingId,
                     hsnCodeId: rest.hsnCodeId,
-                    items: { create: persistedLines },
+                    items: { createMany: { data: persistedLines } },
                 },
                 include: {
                     items: { include: { hsnCode: true } },
@@ -84,8 +92,8 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Auto-create journal entry for non-draft invoices
-        if (parsed.status !== "DRAFT") {
+        // Auto-create journal entry only when invoice is sent.
+        if (parsed.status === "SENT") {
             try {
                 await createInvoiceJournal(invoice.id);
             } catch (err) {

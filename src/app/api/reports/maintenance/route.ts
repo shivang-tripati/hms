@@ -1,17 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getRecentMaintenanceRecords,
   getUpcomingMaintenance,
   getMaintenanceMonthlyCosts,
 } from "@/lib/reports";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
+    const search = searchParams.get("search") || undefined;
+
+    const filters = {
+      startDate: startDateStr ? new Date(startDateStr) : undefined,
+      endDate: endDateStr ? new Date(endDateStr) : undefined,
+      search,
+    };
+
     const [recentRecords, upcomingMaintenance, monthlyCosts] =
       await Promise.all([
-        getRecentMaintenanceRecords(),
-        getUpcomingMaintenance(),
-        getMaintenanceMonthlyCosts(),
+        getRecentMaintenanceRecords(filters),
+        getUpcomingMaintenance(filters),
+        getMaintenanceMonthlyCosts(filters),
       ]);
 
     return NextResponse.json({

@@ -43,7 +43,7 @@ interface ReceiptFormProps {
     invoices: (Invoice & {
         booking: { bookingNumber: string };
     })[];
-    cashBankLedgers: { id: string; name: string }[];
+    cashBankLedgers: { id: string; name: string; isCash: boolean; isBank: boolean }[];
 }
 
 export function ReceiptForm({ clients, invoices, cashBankLedgers }: ReceiptFormProps) {
@@ -66,6 +66,7 @@ export function ReceiptForm({ clients, invoices, cashBankLedgers }: ReceiptFormP
 
     const watchedClientId = form.watch("clientId");
     const watchedInvoiceId = form.watch("invoiceId");
+    const watchedPaymentMode = form.watch("paymentMode");
 
     // Filter invoices by selected client
     const filteredInvoices = invoices.filter(inv =>
@@ -93,6 +94,28 @@ export function ReceiptForm({ clients, invoices, cashBankLedgers }: ReceiptFormP
             form.setValue("receiptNumber", `RCP-${new Date().getFullYear()}-${random}`);
         }
     }, [form]);
+
+    // Payment Mode Logic
+    useEffect(() => {
+        if (watchedPaymentMode === "CASH") {
+            const cashLedger = cashBankLedgers.find((l) => l.isCash);
+            if (cashLedger) {
+                form.setValue("cashBankLedgerId", cashLedger.id);
+            }
+        } else {
+            const currentLedgerId = form.getValues("cashBankLedgerId");
+            const cashLedger = cashBankLedgers.find((l) => l.isCash);
+            if (currentLedgerId && cashLedger && currentLedgerId === cashLedger.id) {
+                form.setValue("cashBankLedgerId", "");
+            }
+        }
+    }, [watchedPaymentMode, cashBankLedgers, form]);
+
+    // Filter ledgers based on payment mode
+    const filteredLedgers = cashBankLedgers.filter((l) => {
+        if (watchedPaymentMode === "CASH") return l.isCash;
+        return !l.isCash; // Show banks / non-cash accounts
+    });
 
     const onSubmit = async (data: ReceiptFormData) => {
         try {
@@ -275,18 +298,24 @@ export function ReceiptForm({ clients, invoices, cashBankLedgers }: ReceiptFormP
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Cash/Bank Account</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select cash/bank ledger" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {cashBankLedgers.map((l) => (
-                                            <SelectItem key={l.id} value={l.id}>
-                                                {l.name}
+                                        {filteredLedgers.length > 0 ? (
+                                            filteredLedgers.map((l) => (
+                                                <SelectItem key={l.id} value={l.id}>
+                                                    {l.name}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="none" disabled>
+                                                No ledgers available
                                             </SelectItem>
-                                        ))}
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />

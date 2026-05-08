@@ -10,12 +10,16 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     let invoice: any;
     let clients: any[];
     let bookings: any[];
+    let invoices: any[];
+    let settings: any;
 
     try {
-        [invoice, clients, bookings] = await Promise.all([
+        [invoice, clients, bookings, invoices, settings] = await Promise.all([
             apiFetch<any>(`/api/invoices/${id}`),
             apiFetch<any[]>("/api/clients"),
             apiFetch<any[]>("/api/bookings"),
+            apiFetch<any[]>("/api/invoices"),
+            apiFetch<any>("/api/settings"),
         ]);
     } catch {
         notFound();
@@ -24,7 +28,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
     if (!invoice) notFound();
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
             <PageHeader
                 title="Edit Invoice"
                 description={`${invoice.invoiceNumber}`}
@@ -51,10 +55,13 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
                             hsnCodeId: row.hsnCodeId,
                             quantity: row.quantity,
                             rate: row.rate,
+                            bookingId: row.bookingId,
                         })),
                     }}
                     clients={clients}
                     bookings={bookings}
+                    existingInvoices={invoices}
+                    settings={settings}
                 />
             </div>
         </div>

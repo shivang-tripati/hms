@@ -11,18 +11,22 @@ export async function GET() {
                 holdingType: true,
                 hsnCode: true,
                 vendor: { select: { id: true, name: true, phone: true } },
-                _count: {
-                    select: {
-                        bookings: true,
-                        ownershipContracts: true,
-                        tasks: true,
-                        inspections: true,
-                    },
-                },
-            },
+                inspections: true,
+                holdingPhotos: true,
+            } as any,
             orderBy: { createdAt: "desc" },
         });
-        return NextResponse.json(holdings);
+        
+        // Transform for backward compatibility
+        const response = holdings.map(h => ({
+            ...h,
+            images: [
+                ...(h as any).legacyImages || [],
+                ...((h as any).holdingPhotos || []).map((p: any) => p.url)
+            ]
+        }));
+        
+        return NextResponse.json(response);
     } catch (error) {
         console.error("[GET /api/holdings]", error);
         return NextResponse.json({ error: "Failed to fetch holdings" }, { status: 500 });
@@ -36,13 +40,81 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
         const parsed = holdingSchema.parse(body);
-        const holding = await prisma.holding.create({
-            data: {
-                ...parsed,
-                vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
-            },
-        });
-        return NextResponse.json(holding, { status: 201 });
+
+        // Extract suggestionId if it was passed (you might need to update holdingSchema to allow it, or just read from body)
+        const suggestionId = body.suggestionId as string | undefined;
+
+        if (suggestionId) {
+            const existingSuggestion = await prisma.locationSuggestion.findUnique({ where: { id: suggestionId } });
+            if (!existingSuggestion) return NextResponse.json({ error: "Suggestion not found" }, { status: 404 });
+            if (existingSuggestion.holdingId) return NextResponse.json({ error: "Suggestion already converted" }, { status: 400 });
+
+            const holding = await prisma.$transaction(async (tx) => {
+                const { images, ...rest } = parsed;
+                const newHolding = await tx.holding.create({
+                    data: {
+                        ...rest,
+                        vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
+                    },
+                });
+
+                if (images && images.length > 0) {
+                    await (tx as any).holdingPhoto.createMany({
+                        data: images.map((img: any) => ({
+                            url: typeof img === "string" ? img : img.url,
+                            holdingId: newHolding.id,
+                            uploadedByUserName: session.user?.name || "System",
+                            uploadedById: session.user?.id || null,
+                            latitude: typeof img === "object" ? img.latitude : null,
+                            longitude: typeof img === "object" ? img.longitude : null,
+                        }))
+                    });
+                }
+
+                await tx.locationSuggestion.update({
+                    where: { id: suggestionId },
+                    data: { 
+                        holdingId: newHolding.id,
+                        convertedAt: new Date(),
+                    }
+                });
+
+                return await tx.holding.findUnique({
+                    where: { id: newHolding.id },
+                    include: { holdingPhotos: true }
+                });
+            });
+            return NextResponse.json(holding, { status: 201 });
+        } else {
+            const { images, ...rest } = parsed;
+            const holding = await prisma.$transaction(async (tx) => {
+                const newHolding = await tx.holding.create({
+                    data: {
+                        ...rest,
+                        vendorId: parsed.assetType === "RENTED" ? parsed.vendorId ?? null : null,
+                    },
+                });
+
+                if (images && images.length > 0) {
+                    await (tx as any).holdingPhoto.createMany({
+                        data: images.map((img: any) => ({
+                            url: typeof img === "string" ? img : img.url,
+                            holdingId: newHolding.id,
+                            uploadedByUserName: session.user?.name || "System",
+                            uploadedById: session.user?.id || null,
+                            latitude: typeof img === "object" ? img.latitude : null,
+                            longitude: typeof img === "object" ? img.longitude : null,
+                        }))
+                    });
+                }
+
+                return await (tx as any).holding.findUnique({
+                    where: { id: newHolding.id },
+                    include: { holdingPhotos: true }
+                });
+            });
+            return NextResponse.json(holding, { status: 201 });
+        }
     } catch (error: any) {
         console.error("[POST /api/holdings]", error);
         if (error?.name === "ZodError") {

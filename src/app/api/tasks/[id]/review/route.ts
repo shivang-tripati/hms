@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
             where: { id: taskId },
             include: {
                 advertisement: {
-                    select: { 
+                    select: {
                         bookingId: true,
                         booking: {
                             select: { holdingId: true }
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                 executions: {
                     orderBy: { createdAt: "desc" },
                     take: 1,
+                    include: { performedBy: true }
                 }
             },
         });
@@ -68,12 +69,61 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
 
 
-                // If this is MOUNTING task being COMPLETED, increment counts
-                if (task.taskType === "MOUNTING" && task.advertisement?.bookingId) {
-                    updatedBooking = await (tx as any).booking.update({
-                        where: { id: task.advertisement.bookingId },
-                        data: { totalMountings: { increment: 1 } },
+                // MOUNTING task completed, update counts and advertisement
+                if (task.taskType === "MOUNTING") {
+                    if (task.advertisementId) {
+                        await (tx as any).advertisement.update({
+                            where: { id: task.advertisementId },
+                            data: { status: "COMPLETED" }
+                        });
+                    }
+
+                    const bId = task.bookingId || task.advertisement?.bookingId;
+                    if (bId) {
+                        updatedBooking = await (tx as any).booking.update({
+                            where: { id: bId },
+                            data: {
+                                totalMountings: { increment: 1 },
+                                status: "ACTIVE"
+                            },
+                        });
+                    }
+                }
+
+                // If this is an INSPECTION task, create the Inspection record
+                if (task.taskType === "INSPECTION" && task.holdingId && latestExecution) {
+                    const inspection = await (tx as any).inspection.create({
+                        data: {
+                            inspectionDate: latestExecution.createdAt,
+                            inspectorName: latestExecution.performedBy?.name || "Unknown Staff",
+                            condition: latestExecution.condition,
+                            illuminationOk: latestExecution.illuminationOk ?? true,
+                            structureOk: latestExecution.structureOk ?? true,
+                            visibilityOk: latestExecution.visibilityOk ?? true,
+                            remarks: latestExecution.remarks,
+                            holdingId: task.holdingId,
+                        }
                     });
+
+                    // Add photos to the inspection
+                    const inspectionPhotos: any[] = [];
+                    const commonMeta = {
+                        uploadedByUserName: latestExecution.performedBy?.name || "System",
+                        uploadedById: latestExecution.performedById,
+                        latitude: latestExecution.latitude,
+                        longitude: latestExecution.longitude,
+                        createdAt: latestExecution.createdAt
+                    };
+
+                    if (latestExecution.frontViewUrl) inspectionPhotos.push({ url: latestExecution.frontViewUrl, caption: "Front View", inspectionId: inspection.id, ...commonMeta });
+                    if (latestExecution.leftViewUrl) inspectionPhotos.push({ url: latestExecution.leftViewUrl, caption: "Left View", inspectionId: inspection.id, ...commonMeta });
+                    if (latestExecution.rightViewUrl) inspectionPhotos.push({ url: latestExecution.rightViewUrl, caption: "Right View", inspectionId: inspection.id, ...commonMeta });
+
+                    if (inspectionPhotos.length > 0) {
+                        await (tx as any).inspectionPhoto.createMany({
+                            data: inspectionPhotos
+                        });
+                    }
                 }
 
                 // Save execution images into holding
@@ -85,18 +135,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     if (latestExecution.rightViewUrl) newImages.push(latestExecution.rightViewUrl);
 
                     if (newImages.length > 0) {
-                        const h = await (tx as any).holding.findUnique({
-                            where: { id: targetHoldingId },
-                            select: { images: true }
+                        await (tx as any).holdingPhoto.createMany({
+                            data: newImages.map(url => ({
+                                url,
+                                holdingId: targetHoldingId,
+                                uploadedByUserName: latestExecution.performedBy?.name || "System",
+                                latitude: latestExecution.latitude,
+                                longitude: latestExecution.longitude,
+                                createdAt: latestExecution.createdAt
+                            }))
                         });
-                        
-                        if (h) {
-                            const updatedImages = [...(h.images || []), ...newImages];
-                            await (tx as any).holding.update({
-                                where: { id: targetHoldingId },
-                                data: { images: updatedImages }
-                            });
-                        }
                     }
                 }
             } else if (action === "REJECT") {

@@ -5,11 +5,11 @@ export async function GET() {
     try {
         console.log("[GET /api/dashboard] Starting fetching stats...");
         const now = new Date();
-
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        const nextWeek = new Date(now);
-        nextWeek.setDate(now.getDate() + 7);
+        const nextWeek = new Date(today);
+        nextWeek.setDate(today.getDate() + 7);
 
         console.log("[GET /api/dashboard] Running Promise.all for stats...");
         const [
@@ -49,7 +49,7 @@ export async function GET() {
             }).catch((err: Error) => { console.error("Error in recentBookings:", err); throw err; }),
             prisma.booking.findMany({
                 where: {
-                    endDate: { gte: now, lte: nextWeek },
+                    endDate: { gte: today, lte: nextWeek },
                     status: { in: ["CONFIRMED", "ACTIVE"] },
                 },
                 take: 5,
@@ -60,7 +60,13 @@ export async function GET() {
                 },
             }).catch((err: Error) => { console.error("Error in expiringBookings:", err); throw err; }),
             prisma.task.findMany({
-                where: { status: "PENDING", scheduledDate: { gte: now } },
+                where: { 
+                    status: { in: ["PENDING", "IN_PROGRESS"] }, 
+                    scheduledDate: { 
+                        gte: today,
+                        lte: nextWeek
+                    } 
+                },
                 take: 5,
                 orderBy: { scheduledDate: "asc" },
                 include: {

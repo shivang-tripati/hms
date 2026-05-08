@@ -46,7 +46,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Vendor Details */}
-                <Card className="col-span-2">
+                <Card className="md:col-span-2">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <User className="h-4 w-4" /> Vendor Details
@@ -87,7 +87,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                 </Card>
 
                 {/* Contract Period & Holding */}
-                <Card className="col-span-2">
+                <Card className="md:col-span-2">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <CalendarDays className="h-4 w-4" /> Contract Period
@@ -152,7 +152,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                 )}
 
                 {/* Documents */}
-                {contract.agreementUrl && (
+                {(contract.agreementUrl || contract.vendor?.kycDocumentUrl) && (
                     <Card className="col-span-full">
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
@@ -169,6 +169,18 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                                 >
                                     <FileText className="h-4 w-4 text-primary" />
                                     Agreement Document
+                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                                </a>
+                            )}
+                            {contract.vendor?.kycDocumentUrl && (
+                                <a
+                                    href={contract.vendor.kycDocumentUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                                >
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    Vendor KYC Document
                                     <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
                                 </a>
                             )}

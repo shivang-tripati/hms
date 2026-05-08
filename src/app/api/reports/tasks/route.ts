@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   getTaskTypeCounts,
   getTaskCompletionMetrics,
@@ -6,15 +6,39 @@ import {
 } from "@/lib/reports";
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const startDateStr = searchParams.get("startDate");
+    const endDateStr = searchParams.get("endDate");
+    const search = searchParams.get("search") || undefined;
+
+    const filters = {
+      startDate: startDateStr ? new Date(startDateStr) : undefined,
+      endDate: endDateStr ? new Date(endDateStr) : undefined,
+      search,
+    };
+
+    const dateFilter = {
+      ...(filters.startDate ? { gte: filters.startDate } : {}),
+      ...(filters.endDate ? { lte: filters.endDate } : {}),
+    };
+
+    const searchFilter = filters.search
+      ? { title: { contains: filters.search, mode: "insensitive" as const } }
+      : {};
+
     const [taskTypeCounts, completionMetrics, costVariance, statusCounts] =
       await Promise.all([
-        getTaskTypeCounts(),
-        getTaskCompletionMetrics(),
-        getTaskCostVariance(),
+        getTaskTypeCounts(filters),
+        getTaskCompletionMetrics(filters),
+        getTaskCostVariance(filters),
         prisma.task.groupBy({
           by: ["status"],
+          where: {
+            ...(Object.keys(dateFilter).length > 0 ? { createdAt: dateFilter } : {}),
+            ...searchFilter,
+          },
           _count: true,
         }),
       ]);

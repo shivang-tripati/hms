@@ -64,35 +64,53 @@ model Holding {
   facing             String?
   landmark           String?
   status             HoldingStatus       @default(AVAILABLE)
-  assetType          AssetType           @default(RENTED)
-  vendorId           String?
+  isInstalled        Boolean             @default(true)
   maintenanceCycle   Int                 @default(90)
   notes              String?
-  images             String[]
   cityId             String
   holdingTypeId      String
   hsnCodeId          String
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  assetType          AssetType           @default(RENTED)
+  vendorId           String?
   bookings           Booking[]
   city               City                @relation(fields: [cityId], references: [id])
   holdingType        HoldingType         @relation(fields: [holdingTypeId], references: [id])
   hsnCode            HsnCode             @relation(fields: [hsnCodeId], references: [id])
+  vendor             Vendor?             @relation("VendorHoldings", fields: [vendorId], references: [id])
   inspections        Inspection[]
+  locationSuggestion LocationSuggestion?
   maintenanceRecords MaintenanceRecord[]
   ownershipContracts OwnershipContract[]
   tasks              Task[]
-  vendor             Vendor?             @relation("VendorHoldings", fields: [vendorId], references: [id])
+  holdingPhotos      HoldingPhoto[]
+  legacyImages       String[]            @map("images")
 
   @@index([status])
   @@index([cityId])
   @@map("holdings")
 }
 
+model HoldingPhoto {
+  id                 String   @id @default(cuid())
+  url                String
+  uploadedByUserName String?
+  uploadedById       String?
+  uploadedBy         User?    @relation("HoldingPhotos", fields: [uploadedById], references: [id], onDelete: SetNull)
+  latitude           Decimal? @db.Decimal(10, 7)
+  longitude          Decimal? @db.Decimal(10, 7)
+  locationText       String?
+  createdAt          DateTime @default(now())
+  holdingId          String
+  holding            Holding  @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+
+  @@map("holding_photos")
+}
+
 model OwnershipContract {
   id              String         @id @default(cuid())
   contractNumber  String         @unique
-  vendorId        String
   rentAmount      Decimal        @db.Decimal(12, 2)
   rentCycle       RentCycle      @default(MONTHLY)
   startDate       DateTime
@@ -100,11 +118,11 @@ model OwnershipContract {
   securityDeposit Decimal?       @db.Decimal(12, 2)
   status          ContractStatus @default(ACTIVE)
   notes           String?
-  agreementUrl    String?
-  ownerKycUrl     String?
   holdingId       String
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  agreementUrl    String?
+  vendorId        String?
   holding         Holding        @relation(fields: [holdingId], references: [id])
   vendor          Vendor?        @relation("VendorContracts", fields: [vendorId], references: [id])
 
@@ -123,11 +141,11 @@ model Client {
   address              String
   isActive             Boolean   @default(true)
   cityId               String?
-  kycDocumentUrl       String?
-  agreementDocumentUrl String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   ledgerId             String?
+  agreementDocumentUrl String?
+  kycDocumentUrl       String?
   bookings             Booking[]
   city                 City?     @relation(fields: [cityId], references: [id])
   ledger               Ledger?   @relation(fields: [ledgerId], references: [id])
@@ -157,6 +175,7 @@ model Booking {
   client         Client          @relation(fields: [clientId], references: [id])
   holding        Holding         @relation(fields: [holdingId], references: [id])
   invoices       Invoice[]
+  invoiceItems   InvoiceItem[]
   tasks          Task[]
 
   @@index([clientId])
@@ -199,11 +218,11 @@ model Task {
   actualCost      Decimal?        @db.Decimal(12, 2)
   notes           String?
   holdingId       String?
-  bookingId       String?
   advertisementId String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   assignedToId    String?
+  bookingId       String?
   executions      TaskExecution[]
   advertisement   Advertisement?  @relation(fields: [advertisementId], references: [id])
   assignedTo      User?           @relation("AssignedToUser", fields: [assignedToId], references: [id])
@@ -220,36 +239,61 @@ model Task {
 }
 
 model TaskExecution {
-  id            String           @id @default(cuid())
-  taskId        String
-  performedById String
-  status        TaskStatus?
-  condition     HoldingCondition
-  remarks       String?
-  latitude      Decimal          @db.Decimal(10, 7)
-  longitude     Decimal          @db.Decimal(10, 7)
-  frontViewUrl  String
-  leftViewUrl   String
-  rightViewUrl  String
-  createdAt     DateTime         @default(now())
-  performedBy   User             @relation(fields: [performedById], references: [id])
-  task          Task             @relation(fields: [taskId], references: [id])
+  id             String               @id @default(cuid())
+  taskId         String
+  performedById  String
+  status         TaskStatus?
+  condition      HoldingCondition
+  remarks        String?
+  latitude       Decimal              @db.Decimal(10, 7)
+  longitude      Decimal              @db.Decimal(10, 7)
+  frontViewUrl   String?
+  leftViewUrl    String?
+  rightViewUrl   String?
+  createdAt      DateTime             @default(now())
+  illuminationOk Boolean?
+  structureOk    Boolean?
+  visibilityOk   Boolean?
+  performedBy    User                 @relation(fields: [performedById], references: [id])
+  task           Task                 @relation(fields: [taskId], references: [id])
+  photos         TaskExecutionPhoto[]
 
   @@map("task_executions")
 }
 
+model TaskExecutionPhoto {
+  id                 String        @id @default(cuid())
+  url                String
+  viewType           String? // e.g. FRONT, LEFT, RIGHT
+  uploadedByUserName String?
+  uploadedById       String?
+  uploadedBy         User?         @relation("TaskExecutionPhotos", fields: [uploadedById], references: [id], onDelete: SetNull)
+  latitude           Decimal?      @db.Decimal(10, 7)
+  longitude          Decimal?      @db.Decimal(10, 7)
+  locationText       String?
+  createdAt          DateTime      @default(now())
+  executionId        String
+  execution          TaskExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("task_execution_photos")
+}
+
 model User {
-  id             String          @id @default(cuid())
-  name           String?
-  email          String          @unique
-  password       String
-  plainPassword  String?
-  role           UserRole        @default(STAFF)
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  taskExecutions TaskExecution[]
-  assignedTasks  Task[]          @relation("AssignedToUser")
+  id                   String               @id @default(cuid())
+  name                 String?
+  email                String               @unique
+  password             String
+  plainPassword        String?
+  role                 UserRole             @default(STAFF)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  isActive             Boolean              @default(true)
+  taskExecutions       TaskExecution[]
+  assignedTasks        Task[]               @relation("AssignedToUser")
+  holdingPhotos        HoldingPhoto[]       @relation("HoldingPhotos")
+  suggestionPhotos     SuggestionPhoto[]    @relation("SuggestionPhotos")
+  taskExecutionPhotos  TaskExecutionPhoto[] @relation("TaskExecutionPhotos")
+  inspectionPhotos     InspectionPhoto[]    @relation("InspectionPhotos")
 
   @@map("users")
 }
@@ -273,12 +317,18 @@ model Inspection {
 }
 
 model InspectionPhoto {
-  id           String     @id @default(cuid())
-  url          String
-  caption      String?
-  inspectionId String
-  createdAt    DateTime   @default(now())
-  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  id                 String     @id @default(cuid())
+  url                String
+  caption            String?
+  uploadedByUserName String?
+  uploadedById       String?
+  uploadedBy         User?      @relation("InspectionPhotos", fields: [uploadedById], references: [id], onDelete: SetNull)
+  latitude           Decimal?   @db.Decimal(10, 7)
+  longitude          Decimal?   @db.Decimal(10, 7)
+  locationText       String?
+  createdAt          DateTime   @default(now())
+  inspectionId       String
+  inspection         Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
 
   @@map("inspection_photos")
 }
@@ -341,21 +391,25 @@ model Invoice {
 }
 
 model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  description String
-  hsnCodeId   String
-  quantity    Decimal  @db.Decimal(10, 2)
-  rate        Decimal  @db.Decimal(12, 2)
-  amount      Decimal  @db.Decimal(12, 2)
-  gstRate     Decimal  @db.Decimal(5, 2)
-  gstAmount   Decimal  @db.Decimal(12, 2)
-  total       Decimal  @db.Decimal(12, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  hsnCode     HsnCode  @relation(fields: [hsnCodeId], references: [id])
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id                  String   @id @default(cuid())
+  invoiceId           String
+  bookingId           String?
+  description         String
+  hsnCodeId           String
+  quantity            Decimal  @db.Decimal(10, 2)
+  rate                Decimal  @db.Decimal(12, 2)
+  amount              Decimal  @db.Decimal(12, 2)
+  gstRate             Decimal  @db.Decimal(5, 2)
+  gstAmount           Decimal  @db.Decimal(12, 2)
+  total               Decimal  @db.Decimal(12, 2)
+  invoiceItemMetadata Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  booking             Booking? @relation(fields: [bookingId], references: [id])
+  hsnCode             HsnCode  @relation(fields: [hsnCodeId], references: [id])
+  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
+  @@index([bookingId])
   @@map("invoice_items")
 }
 
@@ -403,7 +457,8 @@ model Ledger {
   children        Ledger[]      @relation("LedgerParent")
   paymentCashBank Payment[]     @relation("PaymentCashBankLedger")
   receiptCashBank Receipt[]     @relation("ReceiptCashBankLedger")
-  vendors         Vendor[]      @relation("VendorLedger")
+  vendors           Vendor[]      @relation("VendorLedger")
+  liabilityPayments Payment[]     @relation("OtherLiabilityLedger")
 
   @@map("ledgers")
 }
@@ -440,7 +495,7 @@ model JournalLine {
 }
 
 model Vendor {
-  id                   String             @id @default(cuid())
+  id                   String              @id @default(cuid())
   name                 String
   contactPerson        String?
   email                String?
@@ -448,19 +503,19 @@ model Vendor {
   gstNumber            String?
   panNumber            String?
   address              String
-  isActive             Boolean            @default(true)
+  isActive             Boolean             @default(true)
   ownershipContractId  String?
   cityId               String?
   ledgerId             String
-  kycDocumentUrl       String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
   agreementDocumentUrl String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
-  payments             Payment[]
-  city                 City?              @relation(fields: [cityId], references: [id])
-  ledger               Ledger             @relation("VendorLedger", fields: [ledgerId], references: [id])
-  holdings             Holding[]          @relation("VendorHoldings")
+  kycDocumentUrl       String?
+  holdings             Holding[]           @relation("VendorHoldings")
   contracts            OwnershipContract[] @relation("VendorContracts")
+  payments             Payment[]
+  city                 City?               @relation(fields: [cityId], references: [id])
+  ledger               Ledger              @relation("VendorLedger", fields: [ledgerId], references: [id])
 
   @@map("vendors")
 }
@@ -473,14 +528,17 @@ model Payment {
   paymentMode      PaymentMode
   referenceNo      String?
   notes            String?
-  vendorId         String
-  cashBankLedgerId String
-  journalEntryId   String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  cashBankLedger   Ledger        @relation("PaymentCashBankLedger", fields: [cashBankLedgerId], references: [id])
-  journalEntry     JournalEntry? @relation(fields: [journalEntryId], references: [id])
-  vendor           Vendor        @relation(fields: [vendorId], references: [id])
+  paymentType        String        @default("VENDOR")
+  vendorId           String?
+  liabilityLedgerId  String?
+  cashBankLedgerId   String
+  journalEntryId     String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  cashBankLedger     Ledger        @relation("PaymentCashBankLedger", fields: [cashBankLedgerId], references: [id])
+  journalEntry       JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  vendor             Vendor?       @relation(fields: [vendorId], references: [id])
+  liabilityLedger    Ledger?       @relation("OtherLiabilityLedger", fields: [liabilityLedgerId], references: [id])
 
   @@map("payments")
 }
@@ -489,20 +547,39 @@ model LocationSuggestion {
   id           String           @id @default(cuid())
   address      String
   cityId       String
-  latitude     Decimal?         @db.Decimal(10, 7)
-  longitude    Decimal?         @db.Decimal(10, 7)
+  latitude     Decimal?          @db.Decimal(10, 7)
+  longitude    Decimal?          @db.Decimal(10, 7)
   landmark     String?
   description  String?
-  photos       String[]
-  proposedRent Decimal?         @db.Decimal(12, 2)
+  photos       SuggestionPhoto[]
+  proposedRent Decimal?          @db.Decimal(12, 2)
   ownerName    String?
   ownerPhone   String?
   status       SuggestionStatus @default(PENDING)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
+  convertedAt  DateTime?
+  holdingId    String?          @unique
   city         City             @relation(fields: [cityId], references: [id])
+  holding      Holding?         @relation(fields: [holdingId], references: [id])
 
   @@map("location_suggestions")
+}
+
+model SuggestionPhoto {
+  id                 String             @id @default(cuid())
+  url                String
+  uploadedByUserName String?
+  uploadedById       String?
+  uploadedBy         User?              @relation("SuggestionPhotos", fields: [uploadedById], references: [id], onDelete: SetNull)
+  latitude           Decimal?           @db.Decimal(10, 7)
+  longitude          Decimal?           @db.Decimal(10, 7)
+  locationText       String?
+  createdAt          DateTime           @default(now())
+  suggestionId       String
+  suggestion         LocationSuggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+
+  @@map("suggestion_photos")
 }
 
 model CompanySettings {
@@ -512,6 +589,7 @@ model CompanySettings {
   gstNo         String?
   panNo         String?
   address       String?
+  state         String?   @default("Tripura")
   bankName      String?
   accountName   String?
   accountNumber String?
@@ -522,6 +600,7 @@ model CompanySettings {
   terms         String[]
   signatoryName String?  @default("Company Signator Name")
   signatureUrl  String?
+  logoUrl       String?
   footerAddress String?
   website       String?
   phone         String?
@@ -602,6 +681,7 @@ enum TaskType {
   MOUNTING
   MAINTENANCE
   INSPECTION
+  RELOCATION
 }
 
 enum Priority {

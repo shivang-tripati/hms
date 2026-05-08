@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Users, Phone, Mail, MapPin, Receipt, CalendarClock, Pencil } from "lucide-react";
+import { Users, Phone, Mail, MapPin, Receipt, CalendarClock, Pencil, Paperclip, FileText, Download } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -108,6 +108,50 @@ export default async function ClientDetailsPage({ params }: ClientDetailsPagePro
                                 <span className="font-bold">{client.invoices.length}</span>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
+
+                {/* KYC & Documents Section */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Paperclip className="h-4 w-4" /> KYC & Documents
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {client.kycDocumentUrl ? (
+                            <a
+                                href={client.kycDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between p-2 rounded border border-border hover:bg-muted transition-colors text-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span>KYC Document</span>
+                                </div>
+                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                            </a>
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic">No KYC document uploaded</p>
+                        )}
+
+                        {client.agreementDocumentUrl ? (
+                            <a
+                                href={client.agreementDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-between p-2 rounded border border-border hover:bg-muted transition-colors text-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-primary" />
+                                    <span>Agreement Document</span>
+                                </div>
+                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                            </a>
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic">No Agreement document uploaded</p>
+                        )}
                     </CardContent>
                 </Card>
 

@@ -9,7 +9,7 @@ export default async function NewJournalEntryPage() {
     const ledgers = await apiFetch<any[]>("/api/accounting/ledgers");
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <PageHeader
                 title="New Journal Entry"
                 description="Create a manual double-entry journal transaction"

@@ -1,16 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatDate, formatEnum } from "@/lib/utils";
 import {
-    LayoutDashboard,
-    ClipboardCheck,
-    ClipboardList,
-    Clock,
-    ArrowRight,
-    MapPin,
-    Calendar
+    LayoutDashboard, ClipboardCheck, ClipboardList, Clock,
+    ArrowRight, MapPin, Calendar, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,6 +16,11 @@ interface StaffDashboardProps {
 }
 
 export function StaffDashboard({ stats }: StaffDashboardProps) {
+    const upcomingTasks = stats.upcomingTasks || [];
+    const [showMoreUpcoming, setShowMoreUpcoming] = useState(false);
+    const [showMoreRecent, setShowMoreRecent] = useState(false);
+    const ITEMS_LIMIT = 5;
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -80,7 +81,74 @@ export function StaffDashboard({ stats }: StaffDashboardProps) {
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
-                {/* Recent/Next Tasks */}
+                {/* ── Upcoming Tasks (next 7 days) ── */}
+                {upcomingTasks.length > 0 && (
+                    <Card className="col-span-1 md:col-span-3 shadow-md border-amber-500/20 bg-amber-500/5">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                <div>
+                                    <CardTitle className="text-lg text-amber-700">Upcoming — Next 7 Days</CardTitle>
+                                    <CardDescription className="text-amber-600/70">Tasks due soon that need your attention.</CardDescription>
+                                </div>
+                            </div>
+                            <span className="inline-flex items-center justify-center h-7 min-w-[28px] px-2 text-sm font-bold bg-amber-500 text-white rounded-full">
+                                {upcomingTasks.length}
+                            </span>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {(showMoreUpcoming ? upcomingTasks : upcomingTasks.slice(0, ITEMS_LIMIT)).map((task: any) => {
+                                    const holdingCode = task.holding?.code || task.booking?.holding?.code;
+                                    const daysUntil = Math.ceil((new Date(task.scheduledDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                                    return (
+                                         <div key={task.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-amber-200/50 bg-white hover:border-amber-400/50 hover:shadow-md transition-all duration-300 gap-3">
+                                             <div className="flex items-start gap-3">
+                                                 <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors shrink-0">
+                                                     <Calendar className="h-4 w-4" />
+                                                 </div>
+                                                 <div className="min-w-0">
+                                                     <p className="text-sm font-medium text-foreground truncate">{task.title}</p>
+                                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-bold whitespace-nowrap">
+                                                             {formatEnum(task.taskType)}
+                                                         </span>
+                                                         {holdingCode && (
+                                                             <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
+                                                                 <MapPin className="h-3 w-3" /> {holdingCode}
+                                                             </span>
+                                                         )}
+                                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${daysUntil <= 1 ? 'bg-red-100 text-red-700' : daysUntil <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                             {daysUntil === 0 ? "Today" : daysUntil === 1 ? "Tomorrow" : `${daysUntil} days`}
+                                                         </span>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                             <Button asChild size="sm" variant="ghost" className="rounded-full h-9 px-4 sm:h-8 sm:w-8 sm:p-0 group-hover:bg-amber-500 group-hover:text-white transition-all w-full sm:w-auto">
+                                                 <Link href={`/tasks/${task.id}`}>
+                                                     <span className="sm:hidden mr-2">View Task</span>
+                                                     <ArrowRight className="h-4 w-4" />
+                                                 </Link>
+                                             </Button>
+                                         </div>
+                                    );
+                                })}
+                                {upcomingTasks.length > ITEMS_LIMIT && (
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="w-full mt-2 h-auto p-0 text-amber-600"
+                                        onClick={() => setShowMoreUpcoming(!showMoreUpcoming)}
+                                    >
+                                        {showMoreUpcoming ? "Show Less" : `Show All (${upcomingTasks.length})`}
+                                    </Button>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Recent/Pending Tasks */}
                 <Card className="col-span-1 lg:col-span-2 shadow-md border-indigo-500/10">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
@@ -96,7 +164,7 @@ export function StaffDashboard({ stats }: StaffDashboardProps) {
                     <CardContent>
                         {stats.recentTasks?.length > 0 ? (
                             <div className="space-y-4">
-                                {stats.recentTasks.map((task: any) => (
+                                {(showMoreRecent ? stats.recentTasks : stats.recentTasks.slice(0, ITEMS_LIMIT)).map((task: any) => (
                                     <div key={task.id} className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/50 bg-card hover:border-indigo-500/30 hover:shadow-md transition-all duration-300 gap-4">
                                         <div className="flex items-start gap-3">
                                             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors shrink-0">
@@ -124,6 +192,16 @@ export function StaffDashboard({ stats }: StaffDashboardProps) {
                                         </div>
                                     </div>
                                 ))}
+                                {stats.recentTasks.length > ITEMS_LIMIT && (
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="w-full mt-2 h-auto p-0 text-indigo-600"
+                                        onClick={() => setShowMoreRecent(!showMoreRecent)}
+                                    >
+                                        {showMoreRecent ? "Show Less" : `Show All (${stats.recentTasks.length})`}
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center py-12 bg-muted/20 rounded-2xl border-2 border-dashed border-border/50">

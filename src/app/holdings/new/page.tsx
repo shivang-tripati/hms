@@ -44,6 +44,8 @@ export default async function NewHoldingPage({ searchParams }: NewHoldingPagePro
         }
     }
 
+    if (params.suggestionId) initialData.suggestionId = params.suggestionId as string;
+
     // Note: We use 'as any' for Decimal/Number compatibility in initialData partial
 
     return (

@@ -80,11 +80,13 @@ function SuggestionActions({ suggestion }: { suggestion: LocationSuggestion }) {
                         <Eye className="mr-2 h-4 w-4" /> View Details
                     </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link href={`/suggestions/${suggestion.id}/edit`}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit
-                    </Link>
-                </DropdownMenuItem>
+                {suggestion.status === 'PENDING' || suggestion.status === 'REJECTED' && (
+                    <DropdownMenuItem asChild>
+                        <Link href={`/suggestions/${suggestion.id}/edit`}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                        </Link>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete

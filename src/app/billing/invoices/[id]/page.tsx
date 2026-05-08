@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Receipt, Printer, Pencil } from "lucide-react";
+import { Receipt, Printer, Pencil, Download } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -49,6 +49,11 @@ export default async function InvoiceDetailsPage({ params }: InvoiceDetailsPageP
                     <Button variant="outline" size="sm" asChild>
                         <Link href={`/billing/invoices/${id}/print`}>
                             <Printer className="mr-2 h-4 w-4" /> Print
+                        </Link>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href={`/billing/invoices/${id}/annexure`} target="_blank">
+                            <Download className="mr-2 h-4 w-4" /> Download Annexure
                         </Link>
                     </Button>
                     <Button asChild size="sm">

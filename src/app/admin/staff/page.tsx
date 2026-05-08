@@ -4,8 +4,10 @@ import { StaffList } from "@/components/admin/staff-list";
 import { AddStaffModal } from "@/components/admin/add-staff-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Users } from "lucide-react";
+import { auth } from "@/auth";
 
 export default async function StaffManagementPage() {
+    const session = await auth();
     const staff = await apiFetch<any[]>("/api/users");
 
     return (
@@ -19,7 +21,7 @@ export default async function StaffManagementPage() {
                 <AddStaffModal />
             </div>
 
-            <StaffList staff={staff as any} />
+            <StaffList staff={staff as any} currentUserId={session?.user?.id} />
         </div>
     );
 }

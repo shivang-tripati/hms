@@ -7,13 +7,15 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function NewInvoicePage() {
-    const [clients, bookings] = await Promise.all([
+    const [clients, bookings, invoices, settings] = await Promise.all([
         apiFetch<any[]>("/api/clients"),
         apiFetch<any[]>("/api/bookings"),
+        apiFetch<any[]>("/api/invoices"),
+        apiFetch<any>("/api/settings"),
     ]);
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <PageHeader
                 title="Generate Invoice"
                 description="Multi-hoarding invoices with flexible line items (rent, mounting, extra mounting). Totals are calculated on the server."
@@ -23,6 +25,8 @@ export default async function NewInvoicePage() {
                 <InvoiceForm
                     clients={clients}
                     bookings={bookings}
+                    existingInvoices={invoices}
+                    settings={settings}
                 />
             </div>
         </div>

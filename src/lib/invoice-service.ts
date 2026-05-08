@@ -3,6 +3,8 @@
  * Each line stores its own gstAmount/total for display and printing; effective GST % = cgstRate + sgstRate + igstRate.
  */
 
+import type { Prisma } from "@prisma/client";
+
 export type InvoiceHeaderRates = {
     cgstRate: number;
     sgstRate: number;
@@ -16,6 +18,7 @@ export type InvoiceLineInput = {
     rate: number;
     /** Optional; used only for validation (not persisted). */
     bookingId?: string;
+    invoiceItemMetadata?: Prisma.InputJsonValue;
 };
 
 export function round2(n: number): number {
@@ -73,11 +76,14 @@ export function buildPersistedLineItems(
     gstRate: number;
     gstAmount: number;
     total: number;
+    bookingId?: string;
+    invoiceItemMetadata?: Prisma.InputJsonValue;
 }> {
     return inputs.map((row) => {
         const amount = computeLineAmount(row.quantity, row.rate);
         const { gstRate, gstAmount, total } = computeLineTaxAndTotal(amount, rates);
         return {
+            bookingId: row.bookingId,
             description: row.description,
             hsnCodeId: row.hsnCodeId,
             quantity: row.quantity,
@@ -86,6 +92,7 @@ export function buildPersistedLineItems(
             gstRate,
             gstAmount,
             total,
+            invoiceItemMetadata: row.invoiceItemMetadata,
         };
     });
 }

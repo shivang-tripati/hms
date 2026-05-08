@@ -16,16 +16,22 @@ export default async function NewPaymentPage() {
         (l: any) => (l.isCash || l.isBank) && !l.isGroup,
     );
 
+    // Filter for liability ledgers (debit side of non-vendor payments)
+    const liabilityLedgers = ledgers.filter(
+        (l: any) => l.type === "LIABILITY" && !l.isGroup && !l.isPayable
+    );
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <PageHeader
                 title="Record Payment"
-                description="Record an outgoing payment to a vendor"
+                description="Record an outgoing payment"
             />
             <div className="bg-card rounded-xl border shadow-sm p-6">
                 <PaymentForm
                     vendors={vendors}
                     cashBankLedgers={cashBankLedgers}
+                    liabilityLedgers={liabilityLedgers}
                 />
             </div>
         </div>

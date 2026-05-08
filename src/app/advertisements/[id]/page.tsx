@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
-import { Megaphone, Calendar, ImageIcon, User, Pencil, MapPin } from "lucide-react";
+import { Megaphone, Calendar, ImageIcon, User, Pencil, MapPin, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 
@@ -58,11 +58,21 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm">
                         {advertisement.artworkUrl && (
-                            <div className="aspect-video bg-muted rounded-md flex items-center justify-center border overflow-hidden">
-                                {/* Image would go here if we had actual images */}
-                                <img src={advertisement.artworkUrl} alt="Artwork" className="object-contain w-full h-full" />
+                            <div className="space-y-2">
+                                <div className="aspect-video bg-muted rounded-md flex items-center justify-center border overflow-hidden">
+                                    <img src={advertisement.artworkUrl} alt="Artwork" className="object-contain w-full h-full" />
+                                </div>
+                                <Button asChild variant="link" size="sm" className="h-auto p-0">
+                                    <a href={advertisement.artworkUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-primary">
+                                        <LinkIcon className="h-3 w-3" /> View Original Artwork
+                                    </a>
+                                </Button>
                             </div>
                         )}
+                        <div>
+                            <p className="text-muted-foreground mb-1">Artwork URL</p>
+                            <p className="font-mono text-[10px] break-all bg-muted p-2 rounded border">{advertisement.artworkUrl || "N/A"}</p>
+                        </div>
                         <div>
                             <p className="text-muted-foreground mb-1">Artwork Description</p>
                             <p className="font-medium">{advertisement.artworkDescription || "No description provided."}</p>
@@ -96,15 +106,15 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <p className="text-muted-foreground mb-1">Free Installation Days</p>
-                                <p className="font-medium">{advertisement.booking.freeInstallationDays} Days</p>
+                                <p className="font-medium">{advertisement.booking?.freeInstallationDays ?? 0} Days</p>
                             </div>
                             <div>
                                 <p className="text-muted-foreground mb-1">Total Installations</p>
-                                <p className="font-medium">{advertisement.booking.totalInstallations}</p>
+                                <p className="font-medium">{advertisement.booking?.totalInstallations ?? 0}</p>
                             </div>
                             <div>
                                 <p className="text-muted-foreground mb-1">Total Mountings</p>
-                                <p className="font-medium">{advertisement.booking.totalMountings}</p>
+                                <p className="font-medium">{advertisement.booking?.totalMountings ?? 0}</p>
                             </div>
                         </div>
                         <Separator />
@@ -115,10 +125,10 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                                 <Calendar className="h-3.5 w-3.5" /> Linked Booking
                             </div>
                             <div>
-                                <p className="font-bold">{advertisement.booking.bookingNumber}</p>
+                                <p className="font-bold">{advertisement.booking?.bookingNumber}</p>
                                 <div className="flex items-center gap-2 mt-1 text-muted-foreground">
                                     <User className="h-3.5 w-3.5" />
-                                    <span>{advertisement.booking.client.name}</span>
+                                    <span>{advertisement.booking?.client?.name}</span>
                                 </div>
                             </div>
                             <Button asChild variant="link" className="px-0 h-auto" size="sm">
@@ -132,8 +142,8 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                                 <MapPin className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                                <p className="font-semibold">{advertisement.booking.holding.code}</p>
-                                <p className="text-xs text-muted-foreground line-clamp-1">{advertisement.booking.holding.address}</p>
+                                <p className="font-semibold">{advertisement.booking?.holding?.code}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-1">{advertisement.booking?.holding?.address}</p>
                             </div>
                         </div>
                     </CardContent>

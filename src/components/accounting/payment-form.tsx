@@ -37,10 +37,11 @@ import { cn } from "@/lib/utils";
 
 interface PaymentFormProps {
     vendors: any[];
-    cashBankLedgers: any[];
+    cashBankLedgers: { id: string; name: string; isCash: boolean; isBank: boolean }[];
+    liabilityLedgers: any[];
 }
 
-export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
+export function PaymentForm({ vendors, cashBankLedgers, liabilityLedgers }: PaymentFormProps) {
     const router = useRouter();
 
     const form = useForm<PaymentFormData>({
@@ -52,7 +53,9 @@ export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
             paymentMode: "NEFT",
             referenceNo: "",
             notes: "",
+            paymentType: "VENDOR",
             vendorId: "",
+            liabilityLedgerId: "",
             cashBankLedgerId: "",
         },
     });
@@ -64,6 +67,27 @@ export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
             form.setValue("paymentNumber", `PAY-${new Date().getFullYear()}-${random}`);
         }
     }, [form]);
+
+    const watchedPaymentMode = form.watch("paymentMode");
+
+    // Payment Mode Logic: auto-select cash ledger / clear when switching
+    useEffect(() => {
+        if (watchedPaymentMode === "CASH") {
+            const cashLedger = cashBankLedgers.find((l) => l.isCash);
+            if (cashLedger) form.setValue("cashBankLedgerId", cashLedger.id);
+        } else {
+            const currentId = form.getValues("cashBankLedgerId");
+            const cashLedger = cashBankLedgers.find((l) => l.isCash);
+            if (currentId && cashLedger && currentId === cashLedger.id) {
+                form.setValue("cashBankLedgerId", "");
+            }
+        }
+    }, [watchedPaymentMode, cashBankLedgers, form]);
+
+    // Only show cash ledgers for CASH mode, bank ledgers for all others
+    const filteredCashBankLedgers = cashBankLedgers.filter((l) =>
+        watchedPaymentMode === "CASH" ? l.isCash : !l.isCash,
+    );
 
     const onSubmit = async (data: PaymentFormData) => {
         try {
@@ -135,28 +159,84 @@ export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
 
                     <FormField
                         control={form.control}
-                        name="vendorId"
+                        name="paymentType"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Vendor</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormLabel>Payment Type</FormLabel>
+                                <Select 
+                                    onValueChange={(val) => {
+                                        field.onChange(val);
+                                        if (val === "VENDOR") form.setValue("liabilityLedgerId", "");
+                                        else form.setValue("vendorId", "");
+                                    }} 
+                                    value={field.value ?? undefined}
+                                >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select vendor" />
+                                            <SelectValue placeholder="Select type" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {vendors.map((v: any) => (
-                                            <SelectItem key={v.id} value={v.id}>
-                                                {v.name}
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="VENDOR">Vendor Payment</SelectItem>
+                                        <SelectItem value="OTHER_LIABILITY">Other Liability</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+
+                    {form.watch("paymentType") === "VENDOR" ? (
+                        <FormField
+                            control={form.control}
+                            name="vendorId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Vendor</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select vendor" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {vendors.map((v: any) => (
+                                                <SelectItem key={v.id} value={v.id}>
+                                                    {v.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    ) : (
+                        <FormField
+                            control={form.control}
+                            name="liabilityLedgerId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Liability Ledger</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select liability ledger" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {liabilityLedgers.map((l: any) => (
+                                                <SelectItem key={l.id} value={l.id}>
+                                                    {l.name} ({l.code})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <FormField
                         control={form.control}
@@ -183,7 +263,7 @@ export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Payment Mode</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select mode" />
@@ -210,18 +290,22 @@ export function PaymentForm({ vendors, cashBankLedgers }: PaymentFormProps) {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Cash/Bank Account</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select cash/bank ledger" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {cashBankLedgers.map((l: any) => (
-                                            <SelectItem key={l.id} value={l.id}>
-                                                {l.name}
-                                            </SelectItem>
-                                        ))}
+                                        {filteredCashBankLedgers.length > 0 ? (
+                                            filteredCashBankLedgers.map((l) => (
+                                                <SelectItem key={l.id} value={l.id}>
+                                                    {l.name}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="none" disabled>No ledgers available</SelectItem>
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
