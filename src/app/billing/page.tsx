@@ -7,7 +7,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/page-header";
 import { BillingListClient } from "@/components/finance/billing-list";
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function BillingPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const [invoices, receipts] = await Promise.all([
         apiFetch<any[]>("/api/invoices"),
         apiFetch<any[]>("/api/receipts"),

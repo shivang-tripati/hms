@@ -4,6 +4,7 @@
  */
 
 import type { Prisma } from "@prisma/client";
+import logger from "@/lib/logger";
 
 export type InvoiceHeaderRates = {
     cgstRate: number;
@@ -31,7 +32,9 @@ export function effectiveGstPercent(rates: InvoiceHeaderRates): number {
 
 /** Taxable line amount before GST */
 export function computeLineAmount(quantity: number, rate: number): number {
-    return round2(quantity * rate);
+    const result = round2(quantity * rate);
+    logger.debug("Calculation: Line Amount", { inputs: { quantity, rate }, formula: "round(quantity * rate)", result });
+    return result;
 }
 
 /** Per-line GST and total (for InvoiceItem rows) */
@@ -42,6 +45,13 @@ export function computeLineTaxAndTotal(
     const pct = effectiveGstPercent(rates);
     const gstAmount = round2((amount * pct) / 100);
     const total = round2(amount + gstAmount);
+
+    logger.debug("Calculation: Line Tax and Total", {
+        inputs: { amount, rates },
+        formula: "pct = sum(rates); gst = round(amount * pct / 100); total = round(amount + gst)",
+        result: { gstRate: pct, gstAmount, total }
+    });
+
     return { gstRate: pct, gstAmount, total };
 }
 
@@ -61,7 +71,15 @@ export function computeInvoiceHeaderTotals(
     const sgstAmount = round2((subtotal * rates.sgstRate) / 100);
     const igstAmount = round2((subtotal * rates.igstRate) / 100);
     const totalAmount = round2(subtotal + cgstAmount + sgstAmount + igstAmount);
-    return { subtotal, cgstAmount, sgstAmount, igstAmount, totalAmount };
+
+    const result = { subtotal, cgstAmount, sgstAmount, igstAmount, totalAmount };
+    logger.debug("Calculation: Invoice Header Totals", {
+        inputs: { lineAmounts, rates },
+        formula: "subtotal = sum(lines); gst = round(subtotal * rate / 100); total = subtotal + sum(gsts)",
+        result
+    });
+
+    return result;
 }
 
 export function buildPersistedLineItems(

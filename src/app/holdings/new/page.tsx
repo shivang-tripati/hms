@@ -20,7 +20,16 @@ interface NewHoldingPageProps {
     };
 }
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function NewHoldingPage({ searchParams }: NewHoldingPageProps) {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const [cities, types, hsnCodes, vendors] = await Promise.all([
         apiFetch<any[]>("/api/master-data/cities"),
         apiFetch<any[]>("/api/master-data/holding-types"),

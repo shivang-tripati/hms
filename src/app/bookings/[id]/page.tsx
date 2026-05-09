@@ -9,6 +9,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { CalendarDays, MapPin, User, ImageIcon, Pencil } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { auth } from "@/auth";
 
 interface BookingDetailsPageProps {
     params: {
@@ -17,6 +18,8 @@ interface BookingDetailsPageProps {
 }
 
 export default async function BookingDetailsPage({ params }: BookingDetailsPageProps) {
+    const session = await auth();
+    const role = session?.user?.role;
     const { id } = await params;
 
     let booking: any;
@@ -40,11 +43,13 @@ export default async function BookingDetailsPage({ params }: BookingDetailsPageP
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={booking.status} />
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/bookings/${id}/edit`}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                    </Button>
+                    {role === "ADMIN" && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/bookings/${id}/edit`}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </Link>
+                        </Button>
+                    )}
                 </div>
             </div>
 

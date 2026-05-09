@@ -9,6 +9,7 @@ import { formatDate } from "@/lib/utils";
 import { Megaphone, Calendar, ImageIcon, User, Pencil, MapPin, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
+import { auth } from "@/auth";
 
 interface AdvertisementDetailsPageProps {
     params: {
@@ -17,6 +18,8 @@ interface AdvertisementDetailsPageProps {
 }
 
 export default async function AdvertisementDetailsPage({ params }: AdvertisementDetailsPageProps) {
+    const session = await auth();
+    const role = session?.user?.role;
     const { id } = await params;
 
     let advertisement: any;
@@ -31,7 +34,7 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <PageHeader
                     title={advertisement.campaignName}
@@ -40,11 +43,13 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={advertisement.status} />
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/advertisements/${id}/edit`}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
-                        </Link>
-                    </Button>
+                    {role === "ADMIN" && (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/advertisements/${id}/edit`}>
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </Link>
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -131,9 +136,14 @@ export default async function AdvertisementDetailsPage({ params }: Advertisement
                                     <span>{advertisement.booking?.client?.name}</span>
                                 </div>
                             </div>
-                            <Button asChild variant="link" className="px-0 h-auto" size="sm">
-                                <Link href={`/bookings/${advertisement.bookingId}`}>View Booking Records</Link>
-                            </Button>
+                            {role === "ADMIN" &&
+                                <>
+                                    <Button asChild variant="link" className="px-0 h-auto" size="sm">
+                                        <Link href={`/bookings/${advertisement.bookingId}`}>View Booking Records</Link>
+                                    </Button>
+
+                                </>
+                            }
                         </div>
 
                         {/* Linked Holding */}

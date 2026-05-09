@@ -6,7 +6,16 @@ import { HoldingTypeManagement } from "@/components/master-data/holding-type-man
 import { HsnCodeManagement } from "@/components/master-data/hsn-code-management";
 import { MapPin, Layers, Hash } from "lucide-react";
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function MasterDataPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const [cities, holdingTypes, hsnCodes] = await Promise.all([
         apiFetch<any[]>("/api/master-data/cities?all=true", { revalidate: 60 }),
         apiFetch<any[]>("/api/master-data/holding-types?all=true", { revalidate: 60 }),

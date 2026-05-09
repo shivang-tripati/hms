@@ -43,7 +43,7 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
     const canEdit = isAdmin && !isLocked;
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <PageHeader
                     title={task.title}
@@ -75,9 +75,9 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 gap-6">
                 {/* Main Task Info */}
-                <Card className="md:col-span-2">
+                <Card className="md:col-span-1">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <Clock className="h-4 w-4" /> Task Information
@@ -207,75 +207,75 @@ export default async function TaskDetailsPage({ params }: TaskDetailsPageProps) 
                             </CardContent>
                         </Card>
                     )}
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Related Context</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid md:grid-cols-2 gap-6">
-                            {isBookingLinked && task.booking && (
-                                <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
-                                    <div className="bg-emerald-500/10 p-2 rounded-md">
-                                        <FileText className="h-5 w-5 text-emerald-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Booking</p>
-                                        <p className="font-bold">{task.booking.bookingNumber}</p>
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                            <Users className="h-3 w-3" />
-                                            {task.booking.client?.name || "N/A"}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <MapPin className="h-3 w-3" />
-                                            {task.booking.holding?.code || "N/A"} — {task.booking.holding?.name || ""}
-                                        </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <StatusBadge status={task.booking.status} />
-                                        </div>
-                                        {isAdmin && (
-                                            <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
-                                                <Link href={`/bookings/${task.booking.id}`}>View Booking</Link>
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {task.holding && (
-                                <div className="flex items-start gap-4 p-4  bg-card hover:shadow-sm transition-shadow">
-                                    <div className="bg-primary/10 p-2 rounded-md">
-                                        <MapPin className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Holding</p>
-                                        <p className="font-bold">{task.holding.code}</p>
-                                        <p className="text-xs text-muted-foreground line-clamp-1">{task.holding.address}</p>
-                                        <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
-                                            <Link href={`/holdings/${task.holdingId}`}>View Information</Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {task.advertisement && (
-                                <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
-                                    <div className="bg-indigo-500/10 p-2 rounded-md">
-                                        <Megaphone className="h-5 w-5 text-indigo-600" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Advertisement</p>
-                                        <p className="font-bold">{task.advertisement.campaignName}</p>
-                                        <p className="text-xs text-muted-foreground line-clamp-1">{task.advertisement.brandName}</p>
-                                        <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
-                                            <Link href={`/advertisements/${task.advertisementId}`}>View Details</Link>
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Related Context</CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                    {isBookingLinked && task.booking && (
+                        <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+                            <div className="bg-emerald-500/10 p-2 rounded-md">
+                                <FileText className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Booking</p>
+                                <p className="font-bold">{task.booking.bookingNumber}</p>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                    <Users className="h-3 w-3" />
+                                    {task.booking.client?.name || "N/A"}
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    {task.booking.holding?.code || "N/A"} — {task.booking.holding?.name || ""}
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <StatusBadge status={task.booking.status} />
+                                </div>
+                                {isAdmin && (
+                                    <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
+                                        <Link href={`/bookings/${task.booking.id}`}>View Booking</Link>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {task.holding && (
+                        <div className="flex items-start gap-4 p-4  bg-card hover:shadow-sm transition-shadow">
+                            <div className="bg-primary/10 p-2 rounded-md">
+                                <MapPin className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Holding</p>
+                                <p className="font-bold">{task.holding.code}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-1">{task.holding.address}</p>
+                                <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
+                                    <Link href={`/holdings/${task.holdingId}`}>View Information</Link>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {task.advertisement && (
+                        <div className="flex items-start gap-4 p-4 border rounded-lg bg-card hover:shadow-sm transition-shadow">
+                            <div className="bg-indigo-500/10 p-2 rounded-md">
+                                <Megaphone className="h-5 w-5 text-indigo-600" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Advertisement</p>
+                                <p className="font-bold">{task.advertisement.campaignName}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-1">{task.advertisement.brandName}</p>
+                                <Button asChild variant="link" size="sm" className="px-0 h-6 pt-2">
+                                    <Link href={`/advertisements/${task.advertisementId}`}>View Details</Link>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

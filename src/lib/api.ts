@@ -1,4 +1,5 @@
 import { recordActivity } from "@/components/auth/session-timeout";
+import { toast } from "sonner";
 
 export async function apiFetch<T = unknown>(
     url: string,
@@ -59,10 +60,33 @@ export async function apiFetch<T = unknown>(
 
     if (!res.ok) {
         let message = `Request failed: ${res.status} ${res.statusText}`;
+        let requestId = "";
         try {
             const body = await res.json();
             if (body?.error) message = body.error;
+            if (body?.requestId) requestId = body.requestId;
         } catch { }
+
+        // Handle Session Expiry or Unauthorized Access
+        if (res.status === 401 || res.status === 403) {
+            if (typeof window !== "undefined") {
+                // Client-side: Clear any local state and redirect
+                localStorage.clear(); // Clear all as a safety measure
+                toast.error("Session expired. Please login again.");
+                window.location.href = "/login";
+            } else {
+                // Server-side: Import redirect dynamically
+                const { redirect } = await import("next/navigation");
+                redirect("/login");
+            }
+            throw new Error("Session expired or access denied. Redirecting to login...");
+        }
+
+        if (typeof window !== "undefined") {
+            toast.error(message, {
+                description: requestId ? `Error ID: ${requestId}` : undefined,
+            });
+        }
         throw new Error(message);
     }
 

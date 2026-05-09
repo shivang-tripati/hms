@@ -29,25 +29,57 @@ export const authConfig = {
 
             if (!isLoggedIn) return false;
 
-            // Role-based access control for STAFF
+            // Role-based access control
             const role = (auth.user as any)?.role;
-            if (isLoggedIn && role === "STAFF") {
-                const allowedPagePaths = ["/", "/tasks", "/suggestions"];
-                const allowedApiPaths = ["/api/auth", "/api/tasks", "/api/suggestions", "/api/dashboard/staff"];
-                
+            const isStaff = role === "STAFF";
+
+            // Financial & Admin modules (Restricted for STAFF)
+            const restrictedPrefixes = [
+                "/billing",
+                "/invoices",
+                "/accounting",
+                "/ledgers",
+                "/reports",
+                "/analytics",
+                "/admin/staff",
+                "/settings",
+                "/master-data",
+                "/holdings/new",
+                "/bookings/new",
+                "/clients/new",
+                "/advertisements/new",
+                "/ownership-contracts/new",
+                "/ownership-contracts/contracts/new",
+            ];
+
+            const restrictedApiPrefixes = [
+                "/api/invoices",
+                "/api/accounting",
+                "/api/receipts",
+                "/api/reports",
+                "/api/billing",
+                "/api/users",
+                "/api/master-data",
+                "/api/ownership-contracts",
+            ];
+
+            if (isStaff) {
+                // Check if accessing restricted page
+                const isRestrictedPage = restrictedPrefixes.some(prefix =>
+                    pathname === prefix || pathname.startsWith(prefix + "/")
+                );
+
+                if (isRestrictedPage) {
+                    return Response.redirect(new URL("/login", nextUrl));
+                }
+
+                // Check if accessing restricted API
                 if (pathname.startsWith("/api")) {
-                    const isAllowedApi = allowedApiPaths.some(path => 
-                        pathname === path || pathname.startsWith(path + "/")
+                    const isRestrictedApi = restrictedApiPrefixes.some(prefix =>
+                        pathname === prefix || pathname.startsWith(prefix + "/")
                     );
-                    if (!isAllowedApi) {
-                        return Response.json({ error: "Forbidden" }, { status: 403 });
-                    }
-                } else {
-                    const isAllowedPage = allowedPagePaths.some(path => 
-                        path === "/" ? pathname === "/" : (pathname === path || pathname.startsWith(path + "/"))
-                    );
-                    if (!isAllowedPage) {
-                        return Response.redirect(new URL("/", nextUrl));
+                    if (isRestrictedApi) {
+                        return Response.json({ error: "Forbidden: Admin access required" }, { status: 403 });
                     }
                 }
             }

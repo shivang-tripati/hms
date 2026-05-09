@@ -6,7 +6,16 @@ import { CalendarPlus } from "lucide-react";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function NewBookingPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const [clients, holdings] = await Promise.all([
         apiFetch<any[]>("/api/clients"),
         apiFetch<any[]>("/api/holdings"),

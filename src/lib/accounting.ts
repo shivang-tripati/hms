@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import logger from "@/lib/logger";
+import { Prisma } from "@prisma/client";
 
 // ─── Journal Number Generator ────────────────────────────────────────────────
 
@@ -76,12 +78,12 @@ export function validateJournalEntry(lines: JournalLineInput[]): {
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
-        return {
-            valid: false,
-            error: `Debit total (${totalDebit.toFixed(2)}) ≠ Credit total (${totalCredit.toFixed(2)})`,
-        };
+        const error = `Debit total (${totalDebit.toFixed(2)}) ≠ Credit total (${totalCredit.toFixed(2)})`;
+        logger.debug("Validation Failed: Journal Entry", { totalDebit, totalCredit, error });
+        return { valid: false, error };
     }
 
+    logger.debug("Validation Passed: Journal Entry", { totalDebit, totalCredit });
     return { valid: true };
 }
 
@@ -113,6 +115,13 @@ export async function getOrCreateClientLedger(client: {
             isReceivable: true,
             parentId: parentLedger?.id || null,
         },
+    });
+
+    logger.info("Audit: Created Client Ledger", {
+        clientId: client.id,
+        ledgerId: ledger.id,
+        code,
+        name
     });
 
     await tx.client.update({
@@ -167,20 +176,22 @@ export async function getOrCreateVendorLedger(vendor: {
 export async function getLedgerByFlag(
     flag: "isCash" | "isBank" | "isReceivable" | "isPayable" | "isRevenue" | "isTaxOutput" | "isTaxInput",
     nameContains?: string,
+    tx: any = prisma
 ) {
     const where: any = { [flag]: true, isGroup: false };
     if (nameContains) {
         where.name = { contains: nameContains, mode: "insensitive" };
     }
 
-    const ledger = await prisma.ledger.findFirst({ where });
+    const ledger = await tx.ledger.findFirst({ where });
     return ledger;
 }
 
 // ─── Create Invoice Journal ─────────────────────────────────────────────────
 
-export async function createInvoiceJournal(invoiceId: string) {
-    const invoice = await prisma.invoice.findUnique({
+export async function createInvoiceJournal(invoiceId: string, tx: any = prisma) {
+    const client = tx || prisma;
+    const invoice = await client.invoice.findUnique({
         where: { id: invoiceId },
         include: {
             client: true,
@@ -190,9 +201,9 @@ export async function createInvoiceJournal(invoiceId: string) {
 
     if (!invoice) throw new Error("Invoice not found");
 
-    const clientLedger = await getOrCreateClientLedger(invoice.client);
+    const clientLedger = await getOrCreateClientLedger(invoice.client, tx);
 
-    const revenueLedger = await getLedgerByFlag("isRevenue");
+    const revenueLedger = await getLedgerByFlag("isRevenue", undefined, tx);
     if (!revenueLedger) throw new Error("Revenue ledger not found. Please seed default ledgers.");
 
     const lines: JournalLineInput[] = [];
@@ -216,7 +227,7 @@ export async function createInvoiceJournal(invoiceId: string) {
     // Credit: CGST
     const cgst = Number(invoice.cgstAmount);
     if (cgst > 0) {
-        const cgstLedger = await getLedgerByFlag("isTaxOutput", "CGST");
+        const cgstLedger = await getLedgerByFlag("isTaxOutput", "CGST", tx);
         if (cgstLedger) {
             lines.push({
                 ledgerId: cgstLedger.id,
@@ -230,7 +241,7 @@ export async function createInvoiceJournal(invoiceId: string) {
     // Credit: SGST
     const sgst = Number(invoice.sgstAmount);
     if (sgst > 0) {
-        const sgstLedger = await getLedgerByFlag("isTaxOutput", "SGST");
+        const sgstLedger = await getLedgerByFlag("isTaxOutput", "SGST", tx);
         if (sgstLedger) {
             lines.push({
                 ledgerId: sgstLedger.id,
@@ -244,12 +255,11 @@ export async function createInvoiceJournal(invoiceId: string) {
     // Credit: IGST
     const igst = Number(invoice.igstAmount);
     if (igst > 0) {
-        const igstLedger = await getLedgerByFlag("isTaxOutput", "IGST");
+        const igstLedger = await getLedgerByFlag("isTaxOutput", "IGST", tx);
         if (igstLedger) {
             lines.push({
                 ledgerId: igstLedger.id,
-                debit: null,
-                credit: igst,
+                debit: null, credit: igst,
                 description: `IGST on Invoice ${invoice.invoiceNumber}`,
             });
         }
@@ -258,9 +268,9 @@ export async function createInvoiceJournal(invoiceId: string) {
     const validation = validateJournalEntry(lines);
     if (!validation.valid) throw new Error(`Journal validation failed: ${validation.error}`);
 
-    const entryNumber = await generateJournalNumber();
+    const entryNumber = await generateJournalNumber(tx);
 
-    const journal = await prisma.journalEntry.create({
+    const journal = await client.journalEntry.create({
         data: {
             entryNumber,
             entryDate: invoice.invoiceDate,
@@ -280,7 +290,15 @@ export async function createInvoiceJournal(invoiceId: string) {
         include: { lines: true },
     });
 
-    await prisma.invoice.update({
+    logger.info("State Change: Invoice Journal Created", {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        journalId: journal.id,
+        entryNumber,
+        total: invoice.totalAmount
+    });
+
+    await client.invoice.update({
         where: { id: invoice.id },
         data: { journalEntryId: journal.id },
     });
@@ -344,6 +362,14 @@ export async function createReceiptJournal(receiptId: string, tx: any = prisma) 
             },
         },
         include: { lines: true },
+    });
+
+    logger.info("State Change: Receipt Journal Created", {
+        receiptId: receipt.id,
+        receiptNumber: receipt.receiptNumber,
+        journalId: journal.id,
+        entryNumber,
+        amount: receipt.amount
     });
 
     await tx.receipt.update({

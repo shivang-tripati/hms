@@ -3,32 +3,28 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { receiptSchema } from "@/lib/validations";
 import { createReceiptJournal } from "@/lib/accounting";
+import logger from "@/lib/logger";
+import { withErrorHandling } from "@/lib/api-wrapper";
+import { UserRole } from "@prisma/client";
 
-export async function GET() {
-    try {
-        const receipts = await prisma.receipt.findMany({
-            orderBy: { receiptDate: "desc" },
-            include: {
-                client: true,
-                invoice: true,
-                cashBankLedger: { select: { id: true, name: true } },
-                journalEntry: { select: { id: true, entryNumber: true, status: true } },
-            },
-        });
-        return NextResponse.json(receipts);
-    } catch (error) {
-        console.error("[GET /api/receipts]", error);
-        return NextResponse.json({ error: "Failed to fetch receipts" }, { status: 500 });
-    }
-}
+export const GET = withErrorHandling(async () => {
+    const receipts = await prisma.receipt.findMany({
+        orderBy: { receiptDate: "desc" },
+        include: {
+            client: true,
+            invoice: true,
+            cashBankLedger: { select: { id: true, name: true } },
+            journalEntry: { select: { id: true, entryNumber: true, status: true } },
+        },
+    });
+    return NextResponse.json(receipts);
+}, { allowedRoles: [UserRole.ADMIN] });
 
-export async function POST(request: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-        const body = await request.json();
-        const parsed = receiptSchema.parse(body);
+export const POST = withErrorHandling(async (request: NextRequest) => {
+    const session = await auth();
+    const userId = (session as any).user?.id;
+    const body = await request.json();
+    const parsed = receiptSchema.parse(body);
 
         // Validate that the selected ledger is a cash or bank ledger
         const cashBankLedger = await prisma.ledger.findUnique({
@@ -72,18 +68,21 @@ export async function POST(request: NextRequest) {
                 },
             });
 
+            logger.info("Action Performed: Receipt Created", { 
+                userId,
+                receiptId: newReceipt.id, 
+                receiptNumber: newReceipt.receiptNumber,
+                amount: parsed.amount,
+                invoiceId: parsed.invoiceId,
+                invoiceStatusBefore: invoice.status,
+                invoiceStatusAfter: newStatus
+            });
+
             // Auto-create journal entry (mandatory for receipts)
             await createReceiptJournal(newReceipt.id, tx);
 
             return newReceipt;
         });
 
-        return NextResponse.json(receipt, { status: 201 });
-    } catch (error: any) {
-        console.error("[POST /api/receipts]", error);
-        if (error?.name === "ZodError") {
-            return NextResponse.json({ error: error.errors }, { status: 400 });
-        }
-        return NextResponse.json({ error: error.message || "Failed to create receipt" }, { status: 500 });
-    }
-}
+    return NextResponse.json(receipt, { status: 201 });
+}, { allowedRoles: [UserRole.ADMIN] });

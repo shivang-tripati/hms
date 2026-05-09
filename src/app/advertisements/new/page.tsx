@@ -6,7 +6,16 @@ import { PlusCircle } from "lucide-react";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function NewAdvertisementPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const bookings = await apiFetch<any[]>("/api/bookings");
 
     const confirmedBookings = bookings.filter((booking: any) => booking.status === "CONFIRMED");

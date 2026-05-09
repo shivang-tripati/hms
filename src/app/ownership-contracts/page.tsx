@@ -6,7 +6,16 @@ import { Plus, FileText } from "lucide-react";
 import Link from "next/link";
 import { ContractsListClient } from "@/components/contracts/contracts-list";
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function OwnershipContractsPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const contracts = await apiFetch<any[]>("/api/contracts");
 
     return (

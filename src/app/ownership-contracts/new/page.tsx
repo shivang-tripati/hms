@@ -6,7 +6,16 @@ import { PlusCircle } from "lucide-react";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function NewContractPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const [holdings, vendors] = await Promise.all([
         apiFetch<any[]>("/api/holdings"),
         apiFetch<any[]>("/api/accounting/vendors"),

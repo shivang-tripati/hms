@@ -23,7 +23,16 @@ const sourceColors: Record<string, string> = {
     MANUAL: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
+
 export default async function JournalEntriesPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const entries = await apiFetch<any[]>("/api/accounting/journal-entries");
 
     return (

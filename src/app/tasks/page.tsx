@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Plus, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { auth } from "@/auth";
+import logger from "@/lib/logger";
 
 export default async function TasksPage() {
     const session = await auth();
     const role = session?.user?.role;
 
     const tasks = await apiFetch<any[]>("/api/tasks");
+
+    console.log("Tasks Page", { role, tasks });
+    logger.info("Tasks Page", { role, tasks });
 
     return (
         <div className="space-y-6">
