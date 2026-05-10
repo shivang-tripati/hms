@@ -36,6 +36,7 @@ export const authConfig = {
             // Financial & Admin modules (Restricted for STAFF)
             const restrictedPrefixes = [
                 "/billing",
+                "/bookings",
                 "/invoices",
                 "/accounting",
                 "/ledgers",
@@ -43,6 +44,7 @@ export const authConfig = {
                 "/analytics",
                 "/admin/staff",
                 "/settings",
+                "/master-data/ledgers",
                 "/master-data",
                 "/holdings/new",
                 "/bookings/new",

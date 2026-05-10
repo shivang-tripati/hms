@@ -13,7 +13,7 @@ interface ExportColumn {
 interface ExportOptions {
     title: string;
     columns: ExportColumn[];
-    data: any[];
+    rows: any[];
     filters?: Record<string, any>;
 }
 
@@ -21,7 +21,7 @@ export function useExport() {
     const [isExporting, setIsExporting] = useState(false);
 
     const exportData = async (type: 'excel' | 'pdf', options: ExportOptions) => {
-        if (!options.data || options.data.length === 0) {
+        if (!options.rows || options.rows.length === 0) {
             toast.error("No data to export");
             return;
         }
@@ -40,6 +40,8 @@ export function useExport() {
                 const error = await response.json();
                 throw new Error(error.error || "Export failed");
             }
+
+            console.info("Export successful", { type, options, response });
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);

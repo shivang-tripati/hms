@@ -904,7 +904,7 @@ export function InvoiceForm({ initialData, clients, bookings, existingInvoices, 
                                 <p className="text-xs text-muted-foreground">Taxable subtotal</p>
                                 <p className="font-semibold">₹ {previewTotals.subtotal.toFixed(2)}</p>
                             </div>
-                            {isInterState ? (
+                            {isInterState || isIgstMode || previewTotals.igst > 0 ? (
                                 <div>
                                     <p className="text-xs text-muted-foreground">IGST</p>
                                     <p className="font-semibold">₹ {previewTotals.igst.toFixed(2)}</p>

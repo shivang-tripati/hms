@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "ledgers" ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "isSystemLedger" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN     "level" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "path" TEXT;

@@ -3,15 +3,20 @@
 import { ExportButton } from "@/components/shared/export-button";
 
 export function JournalExport({ entries }: { entries: any[] }) {
-    const data = entries.map(entry => {
-        const totalDebit = entry.lines?.reduce((s: number, l: any) => s + Number(l.debit || 0), 0) || 0;
-        const totalCredit = entry.lines?.reduce((s: number, l: any) => s + Number(l.credit || 0), 0) || 0;
-        return {
-            ...entry,
-            totalDebit,
-            totalCredit
-        };
-    });
+    const data = entries.flatMap((entry) =>
+        entry.lines.map((line: any) => ({
+            entryNumber: entry.entryNumber,
+            entryDate: entry.entryDate,
+            source: entry.source,
+            status: entry.status,
+
+            ledger: line.ledger?.name || "-",
+            description: line.description || entry.description,
+
+            debit: Number(line.debit || 0),
+            credit: Number(line.credit || 0),
+        }))
+    );
 
     return (
         <ExportButton
@@ -22,8 +27,8 @@ export function JournalExport({ entries }: { entries: any[] }) {
                 { header: "Date", key: "entryDate", format: "date" },
                 { header: "Source", key: "source" },
                 { header: "Description", key: "description" },
-                { header: "Debit", key: "totalDebit", format: "currency" },
-                { header: "Credit", key: "totalCredit", format: "currency" },
+                { header: "Debit", key: "debit", format: "currency" },
+                { header: "Credit", key: "credit", format: "currency" },
                 { header: "Status", key: "status" },
             ]}
         />

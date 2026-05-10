@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import logger from "@/lib/logger";
+import { Holding, OwnershipContract, Vendor } from "@prisma/client";
 
 interface ContractFormProps {
     initialData?: any;
@@ -184,30 +186,46 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
         resolver: zodResolver(ownershipContractSchema) as any,
         defaultValues: defaultValues as any,
     });
-    
+
     const watchedContractType = useWatch({ control: form.control, name: "contractType" });
     const selectedVendorId = useWatch({ control: form.control, name: "vendorId" });
 
     // Filter Vendors based on Contract Type
-    const filteredVendors = vendors.filter((v: any) => {
-        if (watchedContractType === "ASSET_RENTING") return v.vendorType === "AGENCY";
-        if (watchedContractType === "SPACE_RENTING") return v.vendorType === "LANDLORD";
+    const filteredVendors = vendors.filter((vendor: Vendor) => {
+        if (watchedContractType === "ASSET_RENTING") {
+            return vendor.vendorType === "AGENCY";
+        }
+        if (watchedContractType === "SPACE_RENTING") {
+            return vendor.vendorType === "LANDLORD";
+        }
         return true;
     });
 
     // Filter Holdings based on Contract Type and Vendor
     const filteredHoldings = holdings.filter((holding: any) => {
-        // Rule: A hoarding with ACTIVE contract must NOT appear (unless it's the current one being edited)
-        const hasActiveContract = holding.contracts?.some((c: any) => c.status === "ACTIVE" && c.id !== initialData?.id);
+        // 1. Check for active contracts (using correct relation name)
+        const hasActiveContract = holding.ownershipContracts?.some((contract: OwnershipContract) => {
+            // Skip current contract when editing
+            if (initialData?.id && contract.id === initialData.id) return false;
+            return contract.status === "ACTIVE";
+        });
+
+        // If holding has an active contract, exclude it
         if (hasActiveContract) return false;
 
-        if (watchedContractType === "ASSET_RENTING") {
-            return selectedVendorId ? holding.vendorId === selectedVendorId : true;
+        // 2. Apply contract type specific filters
+        switch (watchedContractType) {
+            case "ASSET_RENTING":
+                // Must have selected vendor AND holding must belong to that vendor
+                return selectedVendorId ? holding.vendorId === selectedVendorId : false;
+
+            case "SPACE_RENTING":
+                // Only show owned assets
+                return holding.assetType === "OWNED";
+
+            default:
+                return true;
         }
-        if (watchedContractType === "SPACE_RENTING") {
-            return holding.assetType === "OWNED";
-        }
-        return true;
     });
 
     // Reset fields when contract type changes
@@ -225,6 +243,8 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
             form.setValue("contractNumber", `OC-${new Date().getFullYear()}-${random}`);
         }
     }, [initialData, form]);
+
+
 
     const onSubmit = async (data: OwnershipContractFormData) => {
         try {

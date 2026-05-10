@@ -38,6 +38,7 @@ WORKDIR /app
 
 # Install minimal runtime deps
 RUN apk add --no-cache dumb-init libc6-compat openssl
+RUN npm install -g tsx
 
 # Environment variables
 ENV NODE_ENV=production

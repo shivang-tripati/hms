@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { LedgerType } from "@prisma/client";
+
+interface TrialBalanceRow {
+    ledgerId: string;
+    ledgerName: string;
+    ledgerCode: string;
+    ledgerType: LedgerType;
+    parentName: string | null;
+    totalDebit: number;
+    totalCredit: number;
+    debitBalance: number;
+    creditBalance: number;
+}
 
 export async function GET(request: NextRequest) {
     try {

@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
         const body = await req.json();
-        const { title, columns, rows, filters } = body;
+        const { title, columns, filters } = body;
+        const rows = body.rows || body.data;
 
         if (!rows || rows.length === 0) {
             return NextResponse.json({ error: "No data to export" }, { status: 400 });

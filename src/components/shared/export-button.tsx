@@ -13,7 +13,8 @@ import { useExport } from "@/hooks/use-export";
 interface ExportButtonProps {
     title: string;
     columns: { header: string; key: string; width?: number; format?: 'currency' | 'date' | 'number' }[];
-    data: any[];
+    rows?: any[];
+    data?: any[]; // For backward compatibility
     filters?: Record<string, any>;
     variant?: "default" | "outline" | "ghost" | "secondary";
     size?: "default" | "sm" | "lg" | "icon";
@@ -23,6 +24,7 @@ interface ExportButtonProps {
 export function ExportButton({
     title,
     columns,
+    rows,
     data,
     filters,
     variant = "outline",
@@ -30,6 +32,7 @@ export function ExportButton({
     className
 }: ExportButtonProps) {
     const { exportData, isExporting } = useExport();
+    const finalRows = rows || data || [];
 
     return (
         <DropdownMenu>
@@ -44,11 +47,11 @@ export function ExportButton({
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => exportData('excel', { title, columns, data, filters })}>
+                <DropdownMenuItem onClick={() => exportData('excel', { title, columns, rows: finalRows, filters })}>
                     <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-600" />
                     <span>Excel (.xlsx)</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportData('pdf', { title, columns, data, filters })}>
+                <DropdownMenuItem onClick={() => exportData('pdf', { title, columns, rows: finalRows, filters })}>
                     <FileText className="mr-2 h-4 w-4 text-rose-600" />
                     <span>PDF (.pdf)</span>
                 </DropdownMenuItem>

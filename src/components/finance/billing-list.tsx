@@ -52,7 +52,7 @@ export function BillingListClient({ type, data }: BillingListClientProps) {
                 renderActions={(filteredData) => (
                     <ExportButton
                         title="Invoices List"
-                        data={filteredData}
+                        rows={filteredData}
                         columns={[
                             { header: "Invoice #", key: "invoiceNumber" },
                             { header: "Date", key: "invoiceDate", format: "date" },
@@ -89,7 +89,7 @@ export function BillingListClient({ type, data }: BillingListClientProps) {
             renderActions={(filteredData) => (
                 <ExportButton
                     title="Receipts List"
-                    data={filteredData}
+                    rows={filteredData}
                     columns={[
                         { header: "Receipt #", key: "receiptNumber" },
                         { header: "Date", key: "receiptDate", format: "date" },

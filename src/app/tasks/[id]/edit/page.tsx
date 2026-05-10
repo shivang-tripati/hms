@@ -29,14 +29,16 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
     let bookings: any[];
     let advertisements: any[];
     let staff: any[];
+    let suggestions: any[];
 
     try {
-        [task, holdings, bookings, advertisements, staff] = await Promise.all([
+        [task, holdings, bookings, advertisements, staff, suggestions] = await Promise.all([
             apiFetch<any>(`/api/tasks/${id}`),
             apiFetch<any[]>("/api/holdings"),
             apiFetch<any[]>("/api/bookings"),
             apiFetch<any[]>("/api/advertisements"),
             apiFetch<any[]>("/api/users?role=STAFF"),
+            apiFetch<any[]>("/api/suggestions?available=true"),
         ]);
     } catch (error) {
         notFound();
@@ -70,6 +72,7 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
                     bookings={activeBookings}
                     advertisements={advertisements}
                     staff={staff}
+                    suggestions={suggestions}
                     role={role}
                 />
             </div>

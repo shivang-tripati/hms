@@ -34,7 +34,7 @@ import { taskSchema, type TaskFormData } from "@/lib/validations";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { Holding, Advertisement, User, Booking } from "@prisma/client";
+import { Holding, Advertisement, User, Booking, LocationSuggestion } from "@prisma/client";
 import { cn } from "@/lib/utils";
 import { useMemo, useState, useEffect, useCallback } from "react";
 
@@ -70,10 +70,11 @@ interface TaskFormProps {
     bookings: BookingWithRelations[];
     advertisements: Advertisement[];
     staff: User[];
+    suggestions: LocationSuggestion[];
     role?: string;
 }
 
-export function TaskForm({ initialData, holdings, bookings, advertisements, staff, role }: TaskFormProps) {
+export function TaskForm({ initialData, holdings, bookings, advertisements, staff, suggestions, role }: TaskFormProps) {
     const isStaff = role === "STAFF";
     const router = useRouter();
 
@@ -125,7 +126,6 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
 
     // Current geo location of selected hoarding (for RELOCATION display)
     const [holdingGeo, setHoldingGeo] = useState<{ lat: number | null; lng: number | null; address: string } | null>(null);
-    const [fetchingGeo, setFetchingGeo] = useState(false);
 
     // Fetch holding geo when RELOCATION/INSTALLATION + holdingId changes
     useEffect(() => {
@@ -136,24 +136,26 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
         }
     }, [isRelocation, isInstallation, watchedHoldingId, holdings]);
 
-    // Auto-fill new location from browser GPS
-    const handleFetchGPS = useCallback(() => {
-        if (!navigator.geolocation) { return; }
-        setFetchingGeo(true);
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                form.setValue("newLatitude", pos.coords.latitude);
-                form.setValue("newLongitude", pos.coords.longitude);
-                setFetchingGeo(false);
-            },
-            () => { setFetchingGeo(false); }
-        );
-    }, [form]);
+    // Auto-fill new location from selected suggestion
+    const handleSelectSuggestion = (suggestionId: string) => {
+        if (suggestionId === "none") {
+            form.setValue("newLatitude", undefined);
+            form.setValue("newLongitude", undefined);
+            form.setValue("newAddress", "");
+            return;
+        }
+        const suggestion = suggestions.find(s => s.id === suggestionId);
+        if (suggestion) {
+            form.setValue("newLatitude", suggestion.latitude ? Number(suggestion.latitude) : undefined);
+            form.setValue("newLongitude", suggestion.longitude ? Number(suggestion.longitude) : undefined);
+            form.setValue("newAddress", suggestion.address);
+        }
+    };
 
     // Un-installed holdings: AVAILABLE status + isInstalled is false
     const uninstalledHoldings = useMemo(() =>
         holdings.filter((h: any) => h.isInstalled === false),
-    [holdings]);
+        [holdings]);
 
     // Filter advertisements by selected booking (MOUNTING only)
     const filteredAdvertisements = useMemo(() => {
@@ -565,14 +567,26 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
                             )}
 
                             <div className="md:col-span-2 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/40 dark:bg-indigo-950/20 dark:border-indigo-700 p-4 space-y-3">
-                                <div className="flex items-center justify-between">
+                                <div className="space-y-2">
                                     <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
-                                        <LocateFixed className="h-4 w-4" /> {isRelocation ? "Suggested New Location" : "Suggested Installation Location"}
+                                        <LocateFixed className="h-4 w-4" /> {isRelocation ? "New Location Assignment" : "Installation Location Assignment"}
                                     </p>
-                                    <Button type="button" size="sm" variant="outline" onClick={handleFetchGPS} disabled={fetchingGeo}
-                                        className="h-7 text-xs gap-1.5">
-                                        <LocateFixed className="h-3 w-3" />{fetchingGeo ? "Fetching..." : "Use My Location"}
-                                    </Button>
+                                    <Select onValueChange={handleSelectSuggestion}>
+                                        <SelectTrigger className="bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-800">
+                                            <SelectValue placeholder="Select a suggested location" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Manual Entry (Custom Location)</SelectItem>
+                                            {suggestions.map((s) => (
+                                                <SelectItem key={s.id} value={s.id}>
+                                                    {s.landmark ? `${s.landmark} — ` : ""}{s.address}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {suggestions.length === 0 && (
+                                        <p className="text-[10px] text-amber-600 font-medium italic">No available suggestions found in.</p>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <FormField control={form.control} name="newLatitude"

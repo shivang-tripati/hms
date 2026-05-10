@@ -3,9 +3,13 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { locationSuggestionSchema } from "@/lib/validations";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url);
+        const available = searchParams.get("available") === "true";
+
         const suggestions = await prisma.locationSuggestion.findMany({
+            where: available ? { holdingId: null } : {},
             orderBy: { createdAt: "desc" },
             include: { city: true },
         });

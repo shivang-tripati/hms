@@ -48,7 +48,7 @@ const reportsSubmenus = [
 ];
 
 const generalSettingsSubmenus = [
-    { name: "Accounts Master", href: "/master-data/ledgers", icon: Layers, roles: ["ADMIN"] },
+    { name: "Accounts", href: "/master-data/ledgers", icon: Layers, roles: ["ADMIN"] },
     { name: "Company Profile", href: "/settings", icon: Building2, roles: ["ADMIN"] },
     { name: "Master Data", href: "/master-data", icon: Database, roles: ["ADMIN"] },
     { name: "User", href: "/admin/staff", icon: Users, roles: ["ADMIN"] },

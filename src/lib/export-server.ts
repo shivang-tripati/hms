@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 // Add type support for jspdf-autotable
@@ -29,7 +29,7 @@ export async function generateExcelBuffer(data: ExportData): Promise<Buffer> {
         const obj: any = {};
         columns.forEach(col => {
             let val = getNestedValue(row, col.key);
-            
+
             // Basic formatting for Excel
             if (col.format === 'currency' && typeof val === 'number') {
                 // xlsx handles number formatting via cell properties, but for simple buffer export
@@ -37,7 +37,7 @@ export async function generateExcelBuffer(data: ExportData): Promise<Buffer> {
             } else if (col.format === 'date' && val) {
                 val = format(new Date(val), 'dd-MM-yyyy');
             }
-            
+
             obj[col.header] = val;
         });
         return obj;
@@ -60,7 +60,7 @@ export async function generateExcelBuffer(data: ExportData): Promise<Buffer> {
 
 export async function generatePdfBuffer(data: ExportData): Promise<Buffer> {
     const { title, columns, rows, filters } = data;
-    
+
     // In Node.js environment, jsPDF might need a different initialization if it's not browser
     // However, jspdf usually works in node as well. 
     // We specify 'p' (portrait), 'mm' (millimeters), 'a4' (A4 paper)
@@ -69,12 +69,12 @@ export async function generatePdfBuffer(data: ExportData): Promise<Buffer> {
     // Title
     doc.setFontSize(18);
     doc.text(title, 14, 22);
-    
+
     // Sub-header (Date & Filters)
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${format(new Date(), 'dd-MM-yyyy HH:mm')}`, 14, 30);
-    
+
     if (filters && Object.keys(filters).length > 0) {
         const filterText = Object.entries(filters)
             .map(([k, v]) => `${k}: ${v}`)
@@ -83,20 +83,36 @@ export async function generatePdfBuffer(data: ExportData): Promise<Buffer> {
     }
 
     const tableHeaders = columns.map(col => col.header);
-    const tableRows = rows.map(row => 
+    const tableRows = rows.map(row =>
         columns.map(col => {
             let val = getNestedValue(row, col.key);
-            if (col.format === 'currency' && typeof val === 'number') {
-                return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val);
+
+            switch (col.format) {
+                case 'currency':
+                    if (val == null || val === '') return '';
+
+                    return new Intl.NumberFormat('en-IN', {
+                        style: 'currency',
+                        currency: 'INR',
+                    }).format(Number(val));
+
+                case 'date':
+                    return val
+                        ? format(new Date(val), 'dd-MM-yyyy')
+                        : '';
+
+                case 'number':
+                    return val != null
+                        ? Number(val).toLocaleString('en-IN')
+                        : '';
+
+                default:
+                    return val != null ? String(val) : '';
             }
-            if (col.format === 'date' && val) {
-                return format(new Date(val), 'dd-MM-yyyy');
-            }
-            return val?.toString() || '';
         })
     );
 
-    doc.autoTable({
+    autoTable(doc, {
         head: [tableHeaders],
         body: tableRows,
         startY: 40,

@@ -16,5 +16,10 @@ done
 echo "Database is ready. Running migrations..."
 ./node_modules/.bin/prisma migrate deploy
 
+# Seed system accounts
+echo "Seeding system accounts..."
+npx tsx scripts/seed-system-accounts.ts
+
+
 echo "Starting Next.js server..."
 exec node server.js

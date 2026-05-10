@@ -1,6 +1,9 @@
 import { apiFetch } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { TrialBalanceExport } from "./trial-balance-client";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -14,6 +17,11 @@ const typeColors: Record<string, string> = {
 };
 
 export default async function TrialBalancePage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const data = await apiFetch<any>("/api/accounting/reports/trial-balance");
 
     return (

@@ -3,16 +3,22 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 import { ledgerSchema } from "@/lib/validations";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get("status"); // "all" = include inactive
+
+        const where = status === "all" ? {} : { isActive: true };
+
         const ledgers = await (prisma as any).ledger.findMany({
+            where,
             orderBy: { name: "asc" },
             include: {
-                parent: { select: { id: true, name: true, code: true } },
-                children: { select: { id: true, name: true, code: true, type: true, isGroup: true } },
+                parent: { select: { id: true, name: true, code: true, isActive: true } },
+                children: { select: { id: true, name: true, code: true, type: true, isGroup: true, isActive: true } },
                 clients: { select: { phone: true } },
                 vendors: { select: { phone: true } },
-                _count: { select: { journalLines: true } },
+                _count: { select: { journalLines: true, children: true } },
             },
         });
         return NextResponse.json(ledgers);

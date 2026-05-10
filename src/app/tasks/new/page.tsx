@@ -11,11 +11,12 @@ export default async function NewTaskPage() {
     const session = await auth();
     const role = session?.user?.role;
 
-    const [holdings, bookings, advertisements, staff] = await Promise.all([
+    const [holdings, bookings, advertisements, staff, suggestions] = await Promise.all([
         apiFetch<any[]>("/api/holdings"),
         apiFetch<any[]>("/api/bookings"),
         apiFetch<any[]>("/api/advertisements"),
         apiFetch<any[]>("/api/users"),
+        apiFetch<any[]>("/api/suggestions?available=true"),
     ]);
 
     const staffMembers = staff.filter((s: any) => s.role === "STAFF");
@@ -26,7 +27,7 @@ export default async function NewTaskPage() {
     );
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-6xl mx-auto">
             <PageHeader
                 title="Create New Task"
                 description="Assign installation, mounting, or maintenance work."
@@ -38,6 +39,7 @@ export default async function NewTaskPage() {
                     bookings={activeBookings}
                     advertisements={advertisements}
                     staff={staffMembers}
+                    suggestions={suggestions}
                     role={role}
                 />
             </div>

@@ -5,8 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Plus, Users } from "lucide-react";
 import Link from "next/link";
 import { ClientsListClient } from "@/components/clients/clients-list";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 export default async function ClientsPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const clients = await apiFetch<any[]>("/api/clients");
 
     return (

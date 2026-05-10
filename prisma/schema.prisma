@@ -451,6 +451,10 @@ model Ledger {
   isRevenue       Boolean       @default(false)
   isTaxOutput     Boolean       @default(false)
   isTaxInput      Boolean       @default(false)
+  isSystemLedger  Boolean       @default(false)
+  isActive        Boolean       @default(true)
+  path            String?
+  level           Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   clients         Client[]

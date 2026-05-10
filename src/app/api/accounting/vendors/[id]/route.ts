@@ -121,6 +121,13 @@ export async function DELETE(
         const vendor = await prisma.vendor.findUnique({
             where: { id },
             include: {
+                _count: {
+                    select: {
+                        holdings: true,
+                        contracts: true,
+                        payments: true,
+                    }
+                },
                 ledger: {
                     include: {
                         _count: {
@@ -135,6 +142,18 @@ export async function DELETE(
             return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
         }
 
+        // 1. Check for operational records
+        if (vendor._count.holdings > 0) {
+            return NextResponse.json({ error: "Cannot delete vendor. Linked holdings exist." }, { status: 400 });
+        }
+        if (vendor._count.contracts > 0) {
+            return NextResponse.json({ error: "Cannot delete vendor. Ownership contracts exist." }, { status: 400 });
+        }
+        if (vendor._count.payments > 0) {
+            return NextResponse.json({ error: "Cannot delete vendor. Payments exist." }, { status: 400 });
+        }
+
+        // 2. Check for financial transactions in ledger
         if (vendor.ledger) {
             if (vendor.ledger._count.journalLines > 0) {
                 return NextResponse.json({ 
@@ -142,7 +161,7 @@ export async function DELETE(
                 }, { status: 400 });
             }
             return NextResponse.json({ 
-                error: "Cannot delete vendor. Delete linked account (ledger) first." 
+                error: "Cannot delete vendor. Delete linked Account Master (ledger) first." 
             }, { status: 400 });
         }
 

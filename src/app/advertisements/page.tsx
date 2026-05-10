@@ -5,8 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Plus, Megaphone } from "lucide-react";
 import Link from "next/link";
 import { AdvertisementsListClient } from "@/components/advertisements/advertisements-list";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { UserRole } from "@prisma/client";
 
 export default async function AdvertisementsPage() {
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        redirect("/login");
+    }
+
     const advertisements = await apiFetch<any[]>("/api/advertisements");
 
     return (

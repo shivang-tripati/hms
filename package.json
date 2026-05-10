@@ -11,7 +11,9 @@
     "db:seed": "npx prisma db seed",
     "db:migrate": "npx prisma migrate dev",
     "db:reset": "npx prisma migrate reset",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "init:accounts": "tsx scripts/seed-system-accounts.ts",
+    "init:all": "npx prisma db seed && tsx scripts/seed-system-accounts.ts"
   },
   "prisma": {
     "seed": "tsx scripts/seed.ts"

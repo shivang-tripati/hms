@@ -90,6 +90,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
         const client = await prisma.client.findUnique({
             where: { id },
             include: {
+                _count: {
+                    select: {
+                        bookings: true,
+                        invoices: true,
+                        receipts: true,
+                    }
+                },
                 ledger: {
                     include: {
                         _count: {
@@ -102,6 +109,18 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
         if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
+        // 1. Check for operational records
+        if (client._count.bookings > 0) {
+            return NextResponse.json({ error: "Cannot delete client. Active bookings exist." }, { status: 400 });
+        }
+        if (client._count.invoices > 0) {
+            return NextResponse.json({ error: "Cannot delete client. Invoices exist." }, { status: 400 });
+        }
+        if (client._count.receipts > 0) {
+            return NextResponse.json({ error: "Cannot delete client. Receipts exist." }, { status: 400 });
+        }
+
+        // 2. Check for financial transactions in ledger
         if (client.ledger) {
             if (client.ledger._count.journalLines > 0) {
                 return NextResponse.json({ 
@@ -109,7 +128,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
                 }, { status: 400 });
             }
             return NextResponse.json({ 
-                error: "Cannot delete client. Delete linked account (ledger) first." 
+                error: "Cannot delete client. Delete linked Account Master (ledger) first." 
             }, { status: 400 });
         }
 

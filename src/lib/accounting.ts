@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import logger from "@/lib/logger";
-import { Prisma } from "@prisma/client";
+import { SystemAccountManager } from "@/lib/system-accounts";
 
 // ─── Journal Number Generator ────────────────────────────────────────────────
 
@@ -19,7 +19,9 @@ export async function generateJournalNumber(tx: any = prisma): Promise<string> {
         seq = parseInt(parts[parts.length - 1], 10) + 1;
     }
 
-    return `${prefix}${seq.toString().padStart(5, "0")}`;
+    const number = `${prefix}${seq.toString().padStart(5, "0")}`;
+    logger.debug("Generated Journal Number", { number });
+    return number;
 }
 
 // ─── Payment Number Generator ────────────────────────────────────────────────
@@ -39,7 +41,9 @@ export async function generatePaymentNumber(): Promise<string> {
         seq = parseInt(parts[parts.length - 1], 10) + 1;
     }
 
-    return `${prefix}${seq.toString().padStart(5, "0")}`;
+    const number = `${prefix}${seq.toString().padStart(5, "0")}`;
+    logger.debug("Generated Payment Number", { number });
+    return number;
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
@@ -107,29 +111,34 @@ export async function getOrCreateClientLedger(client: {
     const code = `AR-${client.id.slice(-6).toUpperCase()}`;
     const name = `${client.name} - Receivable`;
 
-    const ledger = await tx.ledger.create({
-        data: {
-            name,
+    try {
+        const ledger = await tx.ledger.create({
+            data: {
+                name,
+                code,
+                type: "ASSET",
+                isReceivable: true,
+                parentId: parentLedger?.id || null,
+            },
+        });
+
+        logger.info("Audit: Created Client Ledger", {
+            clientId: client.id,
+            ledgerId: ledger.id,
             code,
-            type: "ASSET",
-            isReceivable: true,
-            parentId: parentLedger?.id || null,
-        },
-    });
+            name
+        });
 
-    logger.info("Audit: Created Client Ledger", {
-        clientId: client.id,
-        ledgerId: ledger.id,
-        code,
-        name
-    });
+        await tx.client.update({
+            where: { id: client.id },
+            data: { ledgerId: ledger.id },
+        });
 
-    await tx.client.update({
-        where: { id: client.id },
-        data: { ledgerId: ledger.id },
-    });
-
-    return ledger;
+        return ledger;
+    } catch (error) {
+        logger.error("Failed to get or create client ledger", { clientId: client.id, error });
+        throw error;
+    }
 }
 
 // ─── Get or Create Vendor Payable Ledger ────────────────────────────────────
@@ -152,22 +161,34 @@ export async function getOrCreateVendorLedger(vendor: {
     const code = `AP-${vendor.id.slice(-6).toUpperCase()}`;
     const name = `${vendor.name} - Payable`;
 
-    const ledger = await tx.ledger.create({
-        data: {
-            name,
+    try {
+        const ledger = await tx.ledger.create({
+            data: {
+                name,
+                code,
+                type: "LIABILITY",
+                isPayable: true,
+                parentId: parentLedger?.id || null,
+            },
+        });
+
+        logger.info("Audit: Created Vendor Ledger", {
+            vendorId: vendor.id,
+            ledgerId: ledger.id,
             code,
-            type: "LIABILITY",
-            isPayable: true,
-            parentId: parentLedger?.id || null,
-        },
-    });
+            name
+        });
 
-    await tx.vendor.update({
-        where: { id: vendor.id },
-        data: { ledgerId: ledger.id },
-    });
+        await tx.vendor.update({
+            where: { id: vendor.id },
+            data: { ledgerId: ledger.id },
+        });
 
-    return ledger;
+        return ledger;
+    } catch (error) {
+        logger.error("Failed to get or create vendor ledger", { vendorId: vendor.id, error });
+        throw error;
+    }
 }
 
 
@@ -190,271 +211,316 @@ export async function getLedgerByFlag(
 // ─── Create Invoice Journal ─────────────────────────────────────────────────
 
 export async function createInvoiceJournal(invoiceId: string, tx: any = prisma) {
-    const client = tx || prisma;
-    const invoice = await client.invoice.findUnique({
-        where: { id: invoiceId },
-        include: {
-            client: true,
-            booking: { include: { holding: true } },
-        },
-    });
+    logger.info("Starting createInvoiceJournal", { invoiceId });
+    try {
+        const client = tx || prisma;
+        const invoice = await client.invoice.findUnique({
+            where: { id: invoiceId },
+            include: {
+                client: true,
+                booking: { include: { holding: true } },
+            },
+        });
 
-    if (!invoice) throw new Error("Invoice not found");
+        if (!invoice) {
+            logger.warn("Invoice not found for journal creation", { invoiceId });
+            throw new Error("Invoice not found");
+        }
 
-    const clientLedger = await getOrCreateClientLedger(invoice.client, tx);
+        // Get all required system accounts
+        const accounts = await SystemAccountManager.getAccounts(
+            ["SALES", "CGST", "SGST", "IGST"],
+            tx
+        );
 
-    const revenueLedger = await getLedgerByFlag("isRevenue", undefined, tx);
-    if (!revenueLedger) throw new Error("Revenue ledger not found. Please seed default ledgers.");
+        const clientLedger = await getOrCreateClientLedger(invoice.client, tx);
 
-    const lines: JournalLineInput[] = [];
+        // const revenueLedger = await getLedgerByFlag("isRevenue", undefined, tx);
+        // if (!revenueLedger) {
+        //     logger.error("Revenue ledger not found during invoice journal creation", { invoiceId });
+        //     throw new Error("Revenue ledger not found. Please seed default ledgers.");
+        // }
 
-    // Debit: Client Receivable
-    lines.push({
-        ledgerId: clientLedger.id,
-        debit: Number(invoice.totalAmount),
-        credit: null,
-        description: `Invoice ${invoice.invoiceNumber} - ${invoice.client.name}`,
-    });
+        const lines: JournalLineInput[] = [];
 
-    // Credit: Revenue
-    lines.push({
-        ledgerId: revenueLedger.id,
-        debit: null,
-        credit: Number(invoice.subtotal),
-        description: `Revenue for Invoice ${invoice.invoiceNumber}`,
-    });
+        // Debit: Client Receivable
+        lines.push({
+            ledgerId: clientLedger.id,
+            debit: Number(invoice.totalAmount),
+            credit: null,
+            description: `Invoice ${invoice.invoiceNumber} - ${invoice.client.name}`,
+        });
 
-    // Credit: CGST
-    const cgst = Number(invoice.cgstAmount);
-    if (cgst > 0) {
-        const cgstLedger = await getLedgerByFlag("isTaxOutput", "CGST", tx);
-        if (cgstLedger) {
+        // Credit: Revenue
+        lines.push({
+            ledgerId: accounts.SALES.id,
+            debit: null,
+            credit: Number(invoice.subtotal),
+            description: `Revenue for Invoice ${invoice.invoiceNumber}`,
+        });
+
+        // Credit: CGST (if applicable)
+        const cgst = Number(invoice.cgstAmount || 0);
+        if (cgst > 0) {
             lines.push({
-                ledgerId: cgstLedger.id,
+                ledgerId: accounts.CGST.id,
                 debit: null,
                 credit: cgst,
                 description: `CGST on Invoice ${invoice.invoiceNumber}`,
             });
         }
-    }
 
-    // Credit: SGST
-    const sgst = Number(invoice.sgstAmount);
-    if (sgst > 0) {
-        const sgstLedger = await getLedgerByFlag("isTaxOutput", "SGST", tx);
-        if (sgstLedger) {
+        // Credit: SGST
+        const sgst = Number(invoice.sgstAmount || 0);
+        if (sgst > 0) {
             lines.push({
-                ledgerId: sgstLedger.id,
+                ledgerId: accounts.SGST.id,
                 debit: null,
                 credit: sgst,
                 description: `SGST on Invoice ${invoice.invoiceNumber}`,
             });
         }
-    }
 
-    // Credit: IGST
-    const igst = Number(invoice.igstAmount);
-    if (igst > 0) {
-        const igstLedger = await getLedgerByFlag("isTaxOutput", "IGST", tx);
-        if (igstLedger) {
+        // Credit: IGST
+        const igst = Number(invoice.igstAmount || 0);
+        if (igst > 0) {
             lines.push({
-                ledgerId: igstLedger.id,
-                debit: null, credit: igst,
+                ledgerId: accounts.IGST.id,
+                debit: null,
+                credit: igst,
                 description: `IGST on Invoice ${invoice.invoiceNumber}`,
             });
         }
-    }
 
-    const validation = validateJournalEntry(lines);
-    if (!validation.valid) throw new Error(`Journal validation failed: ${validation.error}`);
+        const validation = validateJournalEntry(lines);
+        if (!validation.valid) {
+            logger.error("Journal validation failed for invoice", { invoiceId, error: validation.error });
+            throw new Error(`Journal validation failed: ${validation.error}`);
+        }
 
-    const entryNumber = await generateJournalNumber(tx);
+        const entryNumber = await generateJournalNumber(tx);
 
-    const journal = await client.journalEntry.create({
-        data: {
-            entryNumber,
-            entryDate: invoice.invoiceDate,
-            description: `Auto-generated for Invoice ${invoice.invoiceNumber}`,
-            source: "INVOICE",
-            sourceId: invoice.id,
-            status: "POSTED",
-            lines: {
-                create: lines.map((l) => ({
-                    ledgerId: l.ledgerId,
-                    debit: l.debit,
-                    credit: l.credit,
-                    description: l.description,
-                })),
+        const journal = await client.journalEntry.create({
+            data: {
+                entryNumber,
+                entryDate: invoice.invoiceDate,
+                description: `Auto-generated for Invoice ${invoice.invoiceNumber}`,
+                source: "INVOICE",
+                sourceId: invoice.id,
+                status: "POSTED",
+                lines: {
+                    create: lines.map((l) => ({
+                        ledgerId: l.ledgerId,
+                        debit: l.debit,
+                        credit: l.credit,
+                        description: l.description,
+                    })),
+                },
             },
-        },
-        include: { lines: true },
-    });
+            include: { lines: true },
+        });
 
-    logger.info("State Change: Invoice Journal Created", {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        journalId: journal.id,
-        entryNumber,
-        total: invoice.totalAmount
-    });
+        logger.info("State Change: Invoice Journal Created", {
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            journalId: journal.id,
+            entryNumber,
+            total: invoice.totalAmount
+        });
 
-    await client.invoice.update({
-        where: { id: invoice.id },
-        data: { journalEntryId: journal.id },
-    });
+        await client.invoice.update({
+            where: { id: invoice.id },
+            data: { journalEntryId: journal.id },
+        });
 
-    return journal;
+        return journal;
+    } catch (error) {
+        logger.error("Error in createInvoiceJournal", { invoiceId, error });
+        throw error;
+    }
 }
 
 // ─── Create Receipt Journal ─────────────────────────────────────────────────
 
 export async function createReceiptJournal(receiptId: string, tx: any = prisma) {
-    const receipt = await tx.receipt.findUnique({
-        where: { id: receiptId },
-        include: {
-            client: true,
-            invoice: true,
-        },
-    });
-
-    if (!receipt) throw new Error("Receipt not found");
-
-    const clientLedger = await getOrCreateClientLedger(receipt.client, tx);
-
-    const lines: JournalLineInput[] = [];
-
-    // Debit: Cash/Bank account
-    lines.push({
-        ledgerId: receipt.cashBankLedgerId,
-        debit: Number(receipt.amount),
-        credit: null,
-        description: `Receipt ${receipt.receiptNumber} from ${receipt.client.name}`,
-    });
-
-    // Credit: Client Receivable
-    lines.push({
-        ledgerId: clientLedger.id,
-        debit: null,
-        credit: Number(receipt.amount),
-        description: `Receipt ${receipt.receiptNumber} against Invoice ${receipt.invoice.invoiceNumber}`,
-    });
-
-    const validation = validateJournalEntry(lines);
-    if (!validation.valid) throw new Error(`Journal validation failed: ${validation.error}`);
-
-    const entryNumber = await generateJournalNumber(tx);
-
-    const journal = await tx.journalEntry.create({
-        data: {
-            entryNumber,
-            entryDate: receipt.receiptDate,
-            description: `Auto-generated for Receipt ${receipt.receiptNumber}`,
-            source: "RECEIPT",
-            sourceId: receipt.id,
-            status: "POSTED",
-            lines: {
-                create: lines.map((l: any) => ({
-                    ledgerId: l.ledgerId,
-                    debit: l.debit,
-                    credit: l.credit,
-                    description: l.description,
-                })),
+    logger.info("Starting createReceiptJournal", { receiptId });
+    try {
+        const receipt = await tx.receipt.findUnique({
+            where: { id: receiptId },
+            include: {
+                client: true,
+                invoice: true,
             },
-        },
-        include: { lines: true },
-    });
+        });
 
-    logger.info("State Change: Receipt Journal Created", {
-        receiptId: receipt.id,
-        receiptNumber: receipt.receiptNumber,
-        journalId: journal.id,
-        entryNumber,
-        amount: receipt.amount
-    });
+        if (!receipt) {
+            logger.warn("Receipt not found for journal creation", { receiptId });
+            throw new Error("Receipt not found");
+        }
 
-    await tx.receipt.update({
-        where: { id: receipt.id },
-        data: { journalEntryId: journal.id },
-    });
+        const clientLedger = await getOrCreateClientLedger(receipt.client, tx);
 
-    return journal;
+        const lines: JournalLineInput[] = [];
+
+        // Debit: Cash/Bank account
+        lines.push({
+            ledgerId: receipt.cashBankLedgerId,
+            debit: Number(receipt.amount),
+            credit: null,
+            description: `Receipt ${receipt.receiptNumber} from ${receipt.client.name}`,
+        });
+
+        // Credit: Client Receivable
+        lines.push({
+            ledgerId: clientLedger.id,
+            debit: null,
+            credit: Number(receipt.amount),
+            description: `Receipt ${receipt.receiptNumber} against Invoice ${receipt.invoice.invoiceNumber}`,
+        });
+
+        const validation = validateJournalEntry(lines);
+        if (!validation.valid) {
+            logger.error("Journal validation failed for receipt", { receiptId, error: validation.error });
+            throw new Error(`Journal validation failed: ${validation.error}`);
+        }
+
+        const entryNumber = await generateJournalNumber(tx);
+
+        const journal = await tx.journalEntry.create({
+            data: {
+                entryNumber,
+                entryDate: receipt.receiptDate,
+                description: `Auto-generated for Receipt ${receipt.receiptNumber}`,
+                source: "RECEIPT",
+                sourceId: receipt.id,
+                status: "POSTED",
+                lines: {
+                    create: lines.map((l: any) => ({
+                        ledgerId: l.ledgerId,
+                        debit: l.debit,
+                        credit: l.credit,
+                        description: l.description,
+                    })),
+                },
+            },
+            include: { lines: true },
+        });
+
+        logger.info("State Change: Receipt Journal Created", {
+            receiptId: receipt.id,
+            receiptNumber: receipt.receiptNumber,
+            journalId: journal.id,
+            entryNumber,
+            amount: receipt.amount
+        });
+
+        await tx.receipt.update({
+            where: { id: receipt.id },
+            data: { journalEntryId: journal.id },
+        });
+
+        return journal;
+    } catch (error) {
+        logger.error("Error in createReceiptJournal", { receiptId, error });
+        throw error;
+    }
 }
 
 // ─── Create Payment Journal ─────────────────────────────────────────────────
 
 export async function createPaymentJournal(paymentId: string, tx: any = prisma) {
-    const payment = await tx.payment.findUnique({
-        where: { id: paymentId },
-        include: {
-            vendor: true,
-            cashBankLedger: true,
-            liabilityLedger: true,
-        },
-    });
-
-    if (!payment) throw new Error("Payment not found");
-    // Determine the debit ledger (either Vendor's AP or specific Liability ledger)
-    let debitLedgerId: string;
-    let descriptionPrefix: string;
-
-    if (payment.paymentType === "OTHER_LIABILITY" && payment.liabilityLedgerId) {
-        debitLedgerId = payment.liabilityLedgerId;
-        descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.liabilityLedger?.name || 'Liability Account'}`;
-    } else {
-        const vendorLedger = await getOrCreateVendorLedger(payment.vendor, tx);
-        debitLedgerId = vendorLedger.id;
-        descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.vendor.name}`;
-    }
-
-    const lines: JournalLineInput[] = [];
-
-    // Debit: Liability
-    lines.push({
-        ledgerId: debitLedgerId,
-        debit: Number(payment.amount),
-        credit: null,
-        description: descriptionPrefix,
-    });
-
-    // Credit: Cash/Bank account
-    lines.push({
-        ledgerId: payment.cashBankLedgerId,
-        debit: null,
-        credit: Number(payment.amount),
-        description: `Payment ${payment.paymentNumber} from cash/bank`,
-    });
-
-    const validation = validateJournalEntry(lines);
-    if (!validation.valid) throw new Error(`Journal validation failed: ${validation.error}`);
-
-    const entryNumber = await generateJournalNumber(tx);
-
-    const journal = await tx.journalEntry.create({
-        data: {
-            entryNumber,
-            entryDate: payment.paymentDate,
-            description: `Auto-generated for Payment ${payment.paymentNumber} to ${payment.vendor.name}`,
-            source: "PAYMENT",
-            sourceId: payment.id,
-            status: "POSTED",
-            lines: {
-                create: lines.map((l: any) => ({
-                    ledgerId: l.ledgerId,
-                    debit: l.debit,
-                    credit: l.credit,
-                    description: l.description,
-                })),
+    logger.info("Starting createPaymentJournal", { paymentId });
+    try {
+        const payment = await tx.payment.findUnique({
+            where: { id: paymentId },
+            include: {
+                vendor: true,
+                cashBankLedger: true,
+                liabilityLedger: true,
             },
-        },
-        include: { lines: true },
-    });
+        });
 
-    await tx.payment.update({
-        where: { id: payment.id },
-        data: { journalEntryId: journal.id },
-    });
+        if (!payment) {
+            logger.warn("Payment not found for journal creation", { paymentId });
+            throw new Error("Payment not found");
+        }
+        // Determine the debit ledger (either Vendor's AP or specific Liability ledger)
+        let debitLedgerId: string;
+        let descriptionPrefix: string;
 
-    return journal;
+        if (payment.paymentType === "OTHER_LIABILITY" && payment.liabilityLedgerId) {
+            debitLedgerId = payment.liabilityLedgerId;
+            descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.liabilityLedger?.name || 'Liability Account'}`;
+        } else {
+            const vendorLedger = await getOrCreateVendorLedger(payment.vendor, tx);
+            debitLedgerId = vendorLedger.id;
+            descriptionPrefix = `Payment ${payment.paymentNumber} to ${payment.vendor.name}`;
+        }
+
+        const lines: JournalLineInput[] = [];
+
+        // Debit: Liability
+        lines.push({
+            ledgerId: debitLedgerId,
+            debit: Number(payment.amount),
+            credit: null,
+            description: descriptionPrefix,
+        });
+
+        // Credit: Cash/Bank account
+        lines.push({
+            ledgerId: payment.cashBankLedgerId,
+            debit: null,
+            credit: Number(payment.amount),
+            description: `Payment ${payment.paymentNumber} from cash/bank`,
+        });
+
+        const validation = validateJournalEntry(lines);
+        if (!validation.valid) {
+            logger.error("Journal validation failed for payment", { paymentId, error: validation.error });
+            throw new Error(`Journal validation failed: ${validation.error}`);
+        }
+
+        const entryNumber = await generateJournalNumber(tx);
+
+        const journal = await tx.journalEntry.create({
+            data: {
+                entryNumber,
+                entryDate: payment.paymentDate,
+                description: `Auto-generated for Payment ${payment.paymentNumber} to ${payment.vendor?.name || 'Vendor'}`,
+                source: "PAYMENT",
+                sourceId: payment.id,
+                status: "POSTED",
+                lines: {
+                    create: lines.map((l: any) => ({
+                        ledgerId: l.ledgerId,
+                        debit: l.debit,
+                        credit: l.credit,
+                        description: l.description,
+                    })),
+                },
+            },
+            include: { lines: true },
+        });
+
+        logger.info("State Change: Payment Journal Created", {
+            paymentId: payment.id,
+            paymentNumber: payment.paymentNumber,
+            journalId: journal.id,
+            entryNumber,
+            amount: payment.amount
+        });
+
+        await tx.payment.update({
+            where: { id: payment.id },
+            data: { journalEntryId: journal.id },
+        });
+
+        return journal;
+    } catch (error) {
+        logger.error("Error in createPaymentJournal", { paymentId, error });
+        throw error;
+    }
 }
 
 // ─── Ledger Balance ─────────────────────────────────────────────────────────
