@@ -45,7 +45,7 @@ interface HoldingFormProps {
 function getAbbreviation(name: string, length: number = 4): string {
     const cleaned = name.toUpperCase().replace(/[^A-Z]/g, "");
     if (cleaned.length <= length) return cleaned.padEnd(length, "X");
-    
+
     // Take first 4 characters for simple consistency
     return cleaned.substring(0, length);
 }
@@ -89,7 +89,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             cityId: initialData.cityId || "",
             holdingTypeId: initialData.holdingTypeId || "",
             hsnCodeId: initialData.hsnCodeId || "",
-            isInstalled: (initialData as any).isInstalled ?? true,
+            isInstalled: (initialData as any).isInstalled ?? false,
             facing: initialData.facing || undefined,
             landmark: initialData.landmark || undefined,
             notes: initialData.notes || undefined,
@@ -110,7 +110,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             cityId: "",
             holdingTypeId: "",
             hsnCodeId: "",
-            isInstalled: true,
+            isInstalled: false,
             images: [],
         };
 
@@ -154,7 +154,7 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
         if (!initialData?.id) {
             const selectedCity = cities.find((c) => c.id === watchedCityId);
             const selectedType = types.find((t) => t.id === watchedHoldingTypeId);
-            
+
             if (selectedCity && selectedType) {
                 const cityPart = getAbbreviation(selectedCity.name);
                 const typePart = getAbbreviation(selectedType.name);
