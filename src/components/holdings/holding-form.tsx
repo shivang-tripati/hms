@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { getCurrentLocation } from "@/lib/geolocation";
-import { City, HoldingType, HsnCode, Holding } from "@prisma/client";
+import { City, HoldingType, HsnCode, Holding, HoldingStatus } from "@prisma/client";
 import { MultiPhotoUpload } from "@/components/shared/multi-photo-upload";
 
 interface HoldingFormProps {
@@ -82,14 +82,13 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             latitude: initialData.latitude ? Number(initialData.latitude) : ("" as any),
             longitude: initialData.longitude ? Number(initialData.longitude) : ("" as any),
             illumination: (initialData.illumination as "LIT" | "NON_LIT" | "DIGITAL") || "NON_LIT",
-            status: (initialData.status as "AVAILABLE" | "BOOKED" | "UNDER_MAINTENANCE" | "INACTIVE") || "AVAILABLE",
+            status: (initialData.status as HoldingStatus) || (initialData.status === "AVAILABLE" ? "AVAILABLE" : "UNINSTALLED"),
             assetType: (initialData.assetType as "OWNED" | "RENTED") || "OWNED",
             vendorId: (initialData as any).vendorId || undefined,
             maintenanceCycle: initialData.maintenanceCycle || 90,
             cityId: initialData.cityId || "",
             holdingTypeId: initialData.holdingTypeId || "",
             hsnCodeId: initialData.hsnCodeId || "",
-            isInstalled: (initialData as any).isInstalled ?? true,
             facing: initialData.facing || undefined,
             landmark: initialData.landmark || undefined,
             notes: initialData.notes || undefined,
@@ -103,14 +102,13 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
             height: 0,
             totalArea: 0,
             illumination: "NON_LIT",
-            status: "AVAILABLE",
+            status: "UNINSTALLED",
             assetType: "OWNED",
             vendorId: undefined,
             maintenanceCycle: 90,
             cityId: "",
             holdingTypeId: "",
             hsnCodeId: "",
-            isInstalled: true,
             images: [],
         };
 
@@ -445,52 +443,57 @@ export function HoldingForm({ initialData, cities, types, hsnCodes, vendors = []
                         )}
                     />
 
-                    <FormField
-                        control={form.control}
-                        name="status"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    {!initialData?.id ? (
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                                     <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select status" />
-                                        </SelectTrigger>
+                                        <Checkbox
+                                            checked={field.value === "AVAILABLE"}
+                                            onCheckedChange={(checked) => {
+                                                field.onChange(checked ? "AVAILABLE" : "UNINSTALLED");
+                                            }}
+                                        />
                                     </FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="AVAILABLE">Available</SelectItem>
-                                        <SelectItem value="BOOKED">Booked</SelectItem>
-                                        <SelectItem value="UNDER_MAINTENANCE">Under Maintenance</SelectItem>
-                                        <SelectItem value="INACTIVE">Inactive</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-
-                    <FormField
-                        control={form.control}
-                        name="isInstalled"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel>
-                                        Currently Installed
-                                    </FormLabel>
-                                    <p className="text-sm text-muted-foreground">
-                                        Uncheck this if the hoarding structure is currently in stock (un-installed).
-                                    </p>
-                                </div>
-                            </FormItem>
-                        )}
-                    />
+                                    <div className="space-y-1 leading-none">
+                                        <FormLabel>
+                                            Mark as Installed
+                                        </FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                            Check this if the hoarding is already installed on-site.
+                                        </p>
+                                    </div>
+                                </FormItem>
+                            )}
+                        />
+                    ) : (
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="UNINSTALLED">Uninstalled</SelectItem>
+                                            <SelectItem value="AVAILABLE">Available</SelectItem>
+                                            <SelectItem value="BOOKED">Booked</SelectItem>
+                                            <SelectItem value="UNDER_MAINTENANCE">Under Maintenance</SelectItem>
+                                            <SelectItem value="INACTIVE">Inactive</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    )}
 
                     <FormField
                         control={form.control}

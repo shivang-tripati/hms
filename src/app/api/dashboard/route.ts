@@ -60,12 +60,12 @@ export async function GET() {
                 },
             }).catch((err: Error) => { console.error("Error in expiringBookings:", err); throw err; }),
             prisma.task.findMany({
-                where: { 
-                    status: { in: ["PENDING", "IN_PROGRESS"] }, 
-                    scheduledDate: { 
+                where: {
+                    status: { in: ["PENDING", "IN_PROGRESS"] },
+                    scheduledDate: {
                         gte: today,
                         lte: nextWeek
-                    } 
+                    }
                 },
                 take: 5,
                 orderBy: { scheduledDate: "asc" },

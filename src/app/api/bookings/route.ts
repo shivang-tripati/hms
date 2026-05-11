@@ -46,10 +46,22 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const body = await request.json();
     const parsed = bookingSchema.parse(body);
 
+    const holding = await prisma.holding.findUnique({
+        where: { id: parsed.holdingId },
+        select: { status: true }
+    });
+
+    if (!holding || holding.status !== "AVAILABLE") {
+        return NextResponse.json(
+            { error: "Booking is only allowed for AVAILABLE hoardings." },
+            { status: 400 }
+        );
+    }
+
     const isAvailable = await checkAvailability(parsed.holdingId, parsed.startDate, parsed.endDate);
     if (!isAvailable) {
         return NextResponse.json(
-            { error: "Holding is not available for the selected dates." },
+            { error: "Holding has overlapping bookings for the selected dates." },
             { status: 409 },
         );
     }

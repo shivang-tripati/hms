@@ -58,6 +58,20 @@ export async function POST(request: NextRequest) {
         const { assignedTo, holdingId, bookingId, advertisementId, completedDate,
             newLatitude, newLongitude, newAddress, ...otherData } = parsed;
 
+        // Validation for INSTALLATION tasks
+        if (parsed.taskType === "INSTALLATION") {
+            if (!holdingId) {
+                return NextResponse.json({ error: "Holding ID is required for installation tasks" }, { status: 400 });
+            }
+            const holding = await prisma.holding.findUnique({
+                where: { id: holdingId },
+                select: { status: true }
+            });
+            if (!holding || holding.status !== "UNINSTALLED") {
+                return NextResponse.json({ error: "Installation task can only be created for UNINSTALLED hoardings" }, { status: 400 });
+            }
+        }
+
         // For MOUNTING, auto-derive holdingId from the booking
         let derivedHoldingId = holdingId || null;
         if (parsed.taskType === "MOUNTING" && bookingId) {

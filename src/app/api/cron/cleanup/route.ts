@@ -18,7 +18,7 @@ export async function GET(request: Request) {
         // 1. Find all bookings that have passed their end date but are still marked as active
         const expiredBookings = await prisma.booking.findMany({
             where: {
-                status: { in: ["ACTIVE", "CONFIRMED"] },
+                status: "ACTIVE",
                 endDate: { lt: now },
             },
             select: {

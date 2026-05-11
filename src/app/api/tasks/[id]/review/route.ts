@@ -67,7 +67,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                     });
                 }
 
-
+                // INSTALLATION task completed → make holding AVAILABLE
+                if (task.taskType === "INSTALLATION") {
+                    if (!task.holdingId) {
+                        throw new Error("Installation task must have a linked holdingId.");
+                    }
+                    await tx.holding.update({
+                        where: { id: task.holdingId },
+                        data: {
+                            status: "AVAILABLE"
+                        }
+                    });
+                }
 
                 // MOUNTING task completed, update counts and advertisement
                 if (task.taskType === "MOUNTING") {

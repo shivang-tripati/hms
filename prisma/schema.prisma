@@ -63,8 +63,7 @@ model Holding {
   illumination       Illumination        @default(NON_LIT)
   facing             String?
   landmark           String?
-  status             HoldingStatus       @default(AVAILABLE)
-  isInstalled        Boolean             @default(true)
+  status             HoldingStatus       @default(UNINSTALLED)
   maintenanceCycle   Int                 @default(90)
   notes              String?
   cityId             String
@@ -626,6 +625,7 @@ enum Illumination {
 }
 
 enum HoldingStatus {
+  UNINSTALLED
   AVAILABLE
   BOOKED
   UNDER_MAINTENANCE

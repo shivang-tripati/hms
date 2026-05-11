@@ -150,9 +150,9 @@ export function TaskForm({ initialData, holdings, bookings, advertisements, staf
         );
     }, [form]);
 
-    // Un-installed holdings: AVAILABLE status + isInstalled is false
+    // Un-installed holdings: status is UNINSTALLED
     const uninstalledHoldings = useMemo(() =>
-        holdings.filter((h: any) => h.isInstalled === false),
+        holdings.filter((h: any) => h.status === "UNINSTALLED"),
     [holdings]);
 
     // Filter advertisements by selected booking (MOUNTING only)

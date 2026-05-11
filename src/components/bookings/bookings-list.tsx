@@ -8,6 +8,7 @@ const BOOKING_STATUS_OPTIONS = [
     { value: "ALL", label: "All Statuses" },
     { value: "PENDING", label: "Pending" },
     { value: "CONFIRMED", label: "Confirmed" },
+    { value: "ACTIVE", label: "Active" },
     { value: "COMPLETED", label: "Completed" },
     { value: "CANCELLED", label: "Cancelled" },
 ];
