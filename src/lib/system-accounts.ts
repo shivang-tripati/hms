@@ -168,10 +168,12 @@ export class SystemAccountManager {
     ): Promise<any> {
         const config = SYSTEM_ACCOUNT_CONFIG[accountType];
 
-        const ledger = await tx.ledger.create({
-            data: {
+        const ledger = await tx.ledger.upsert({
+            where: { code: config.code },   // code must be @unique in schema.prisma
+            update: {},                     // do nothing if it exists
+            create: {
                 name: config.name,
-                code: `${config.code}-${Date.now().toString().slice(-6)}`,
+                code: config.code,
                 type: config.type,
                 isRevenue: config.isRevenue || false,
                 isCash: config.isCash || false,
@@ -183,13 +185,14 @@ export class SystemAccountManager {
             },
         });
 
-        logger.info(`Created system account: ${accountType}`, {
+        logger.info(`Ensured system account: ${accountType}`, {
             ledgerId: ledger.id,
             name: ledger.name
         });
 
         return ledger;
     }
+
 
     /**
      * Validate all system accounts exist (for health check)
