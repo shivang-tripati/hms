@@ -48,6 +48,10 @@ services:
     volumes:
       - ./uploads:/app/public/uploads
       - ./logs:/app/logs
+
+    networks:
+      - cas-network
+
     logging:
       driver: "json-file"
       options:
