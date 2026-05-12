@@ -3,7 +3,7 @@ set -e
 
 echo "Waiting for database to be ready..."
 
-Wait for DB connectivity first, before attempting migrate
+# Wait for DB connectivity first, before attempting migrate
 until node -e "
 const { Client } = require('pg');
 const client = new Client({ connectionString: process.env.DATABASE_URL });
