@@ -16,7 +16,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,13 +69,7 @@ services:
 
     # FIXED: More reliable healthcheck for Next.js
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
-        ]
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -89,13 +83,7 @@ services:
       hms-app:
         condition: service_healthy
     command: >
-      sh -c "apk add --no-cache curl &&
-      echo '0 2 * * * curl -X GET http://hms-app:3000/api/cron/maintenance -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' > /etc/crontabs/root &&
-      echo '30 2 * * * curl -X GET http://hms-app:3000/api/cron/cleanup -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root &&
-      echo '* * * * * curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root &&
-      echo '* * * * * sleep 20 && curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root &&
-      echo '* * * * * sleep 40 && curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root &&
-      crond -f -d 8"
+      sh -c "apk add --no-cache curl && echo '54 18 * * * curl -X GET http://hms-app:3000/api/cron/maintenance -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' > /etc/crontabs/root && echo '55 18 * * * curl -X GET http://hms-app:3000/api/cron/cleanup -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root && echo '* * * * * curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root && echo '* * * * * sleep 20 && curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root && echo '* * * * * sleep 40 && curl -X GET http://hms-app:3000/api/cron/test -H \"Authorization: Bearer $${CRON_SECRET}\" >> /var/log/cron.log 2>&1' >> /etc/crontabs/root && crond -f -d 8"
     environment:
       CRON_SECRET: ${CRON_SECRET}
     networks:

@@ -8,7 +8,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         const { id } = await params;
         const suggestion = await prisma.locationSuggestion.findUnique({
             where: { id },
-            include: { city: true },
+            include: { 
+                city: true,
+                suggestedBy: { select: { id: true, name: true, email: true } },
+                photos: true
+            },
         });
         if (!suggestion) return NextResponse.json({ error: "Not found" }, { status: 404 });
         return NextResponse.json(suggestion);
@@ -48,6 +52,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                         deleteMany: {}, // clear old
                         create: parsed.photos.map((p) => ({
                             url: p.url,
+                            uploadedById: session?.user?.id,
+                            uploadedByUserName: session?.user?.name,
                         })),
                     }
                     : undefined,

@@ -40,8 +40,8 @@ export const SuggestionListColumns = [
         header: "Suggested By",
         cell: (row: any) => (
             <div className="flex flex-col">
-                <span className="text-sm font-medium">{row.suggestedByName || "Legacy User"}</span>
-                <span className="text-[10px] text-muted-foreground">{row.suggestedBy?.email || ""}</span>
+                <span className="text-sm font-medium">{row.suggestedByName || "N/A"}</span>
+                <span className="text-[10px] text-muted-foreground">{row.suggestedBy?.email || "N/A"}</span>
             </div>
         ),
     },

@@ -145,6 +145,8 @@ export function FilterableDataTable<T extends { id?: string }>({
 
     const showFilterBar = searchFields.length > 0 || filters.length > 0;
 
+    console.log(data)
+
     return (
         <div className="space-y-4">
             {/* Search & Filter Bar */}

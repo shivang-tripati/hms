@@ -36,7 +36,8 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
             />
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="hover:shadow-lg transition-shadow border-emerald-500/20 bg-emerald-500/5">
+
+                <Card className="hover:shadow-lg transition-shadow border-emerald-500/20 bg-emerald-500/5 h-full">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-emerald-600">Monthly Revenue</CardTitle>
                         <Banknote className="h-4 w-4 text-emerald-600" />
@@ -51,44 +52,50 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
                     </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Bookings</CardTitle>
-                        <CalendarClock className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.activeBookings}</div>
-                        <p className="text-xs text-muted-foreground">
-                            currently running campaigns
-                        </p>
-                    </CardContent>
-                </Card>
+                <Link href="/bookings" className="block transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                    <Card className="hover:shadow-lg transition-shadow h-full">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Active Bookings</CardTitle>
+                            <CalendarClock className="h-4 w-4 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.activeBookings}</div>
+                            <p className="text-xs text-muted-foreground">
+                                currently running campaigns
+                            </p>
+                        </CardContent>
+                    </Card>
+                </Link>
 
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Pending Tasks</CardTitle>
-                        <CheckSquare className="h-4 w-4 text-amber-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.pendingTasks}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Installations & Maintenance
-                        </p>
-                    </CardContent>
-                </Card>
+                <Link href="/tasks" className="block transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                    <Card className="hover:shadow-lg transition-shadow h-full">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Pending Tasks</CardTitle>
+                            <CheckSquare className="h-4 w-4 text-amber-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.pendingTasks}</div>
+                            <p className="text-xs text-muted-foreground">
+                                Installations & Maintenance
+                            </p>
+                        </CardContent>
+                    </Card>
+                </Link>
 
-                <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Holdings</CardTitle>
-                        <MapPin className="h-4 w-4 text-blue-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.totalHoldings}</div>
-                        <p className="text-xs text-muted-foreground">
-                            across all cities
-                        </p>
-                    </CardContent>
-                </Card>
+                <Link href="/holdings" className="block transition-transform hover:scale-[1.02] active:scale-[0.98]">
+                    <Card className="hover:shadow-lg transition-shadow h-full">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">Total Holdings</CardTitle>
+                            <MapPin className="h-4 w-4 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{stats.totalHoldings}</div>
+                            <p className="text-xs text-muted-foreground">
+                                across all cities
+                            </p>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -139,12 +146,17 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
 
                 {/* Recent Activity */}
                 <Card className="md:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-primary" />
-                            Recent Bookings
-                        </CardTitle>
-                        <CardDescription>Latest confirmed campaigns.</CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <div className="space-y-1">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5 text-primary" />
+                                Recent Bookings
+                            </CardTitle>
+                            <CardDescription>Latest confirmed campaigns.</CardDescription>
+                        </div>
+                        <Link href="/bookings">
+                            <Button variant="outline" size="sm">View All</Button>
+                        </Link>
                     </CardHeader>
                     <CardContent>
                         {stats.recentBookings?.length > 0 ? (

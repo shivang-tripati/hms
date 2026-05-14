@@ -41,7 +41,7 @@ export default async function SuggestionDetailsPage({ params }: SuggestionDetail
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <PageHeader
                     title="Location Proposal"
-                    description={`Submitted by ${suggestion.suggestedByName || "Legacy User"} on ${formatDate(suggestion.createdAt)}`}
+                    description={`Submitted by ${suggestion.suggestedBy?.name} on ${formatDate(suggestion.createdAt)}`}
                     icon={MapPin}
                 />
                 <div className="flex items-center gap-2">

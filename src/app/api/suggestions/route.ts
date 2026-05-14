@@ -11,7 +11,11 @@ export async function GET(request: NextRequest) {
         const suggestions = await prisma.locationSuggestion.findMany({
             where: available ? { holdingId: null } : {},
             orderBy: { createdAt: "desc" },
-            include: { city: true },
+            include: {
+                city: true,
+                suggestedBy: { select: { id: true, name: true, email: true } },
+                photos: true
+            },
         });
         return NextResponse.json(suggestions);
     } catch (error) {
@@ -28,20 +32,14 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const parsed = locationSuggestionSchema.parse(body);
 
-        const { photos, ...rest } = parsed;
+        const { photos, cityId, ...rest } = parsed;
 
         const suggestionPhotosData = (photos || []).map((img: any) => {
-            if (typeof img === "object" && img !== null) {
-                return {
-                    url: img.url,
-                    latitude: img.latitude || null,
-                    longitude: img.longitude || null,
-                    uploadedByUserName: session?.user?.name || "System",
-                    uploadedById: session?.user?.id || null,
-                };
-            }
+            const isObj = typeof img === "object" && img !== null;
             return {
-                url: img,
+                url: isObj ? img.url : img,
+                latitude: (isObj ? img.latitude : null) ?? rest.latitude,
+                longitude: (isObj ? img.longitude : null) ?? rest.longitude,
                 uploadedByUserName: session?.user?.name || "System",
                 uploadedById: session?.user?.id || null,
             };
@@ -50,10 +48,21 @@ export async function POST(request: NextRequest) {
         const suggestion = await prisma.locationSuggestion.create({
             data: {
                 ...rest,
+                city: {
+                    connect: { id: cityId }
+                },
+                suggestedBy: {
+                    connect: { id: session.user.id }
+                },
+                suggestedByName: session.user.name,
                 photos: {
                     create: suggestionPhotosData
                 },
             },
+            include: {
+                photos: true,
+                suggestedBy: { select: { id: true, name: true, email: true } }
+            }
         });
 
         return NextResponse.json(suggestion, { status: 201 });
