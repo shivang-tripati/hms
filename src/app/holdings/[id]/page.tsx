@@ -174,7 +174,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                     <Card className="col-span-1 shadow-sm border-border/60">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4 text-primary" /> 
+                                <CalendarClock className="h-4 w-4 text-primary" />
                                 {holding?.bookings?.[0]?.endDate && Date.now() > new Date(holding.bookings[0].endDate).getTime() ? "Past Booking" : "Current Booking"}
                             </CardTitle>
                         </CardHeader>
@@ -279,10 +279,16 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                         </CardHeader>
                         <CardContent className="space-y-6 pt-6 text-sm">
                             <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div className="min-w-0">
-                                    <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider font-bold">Primary Contractor</p>
-                                    <p className="font-bold text-xl text-primary truncate">{holding.vendor.name}</p>
-                                    <div className="mt-1.5"><StatusBadge status={holding.vendor.isActive ? "ACTIVE" : "INACTIVE"} /></div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider font-bold">
+                                        Primary Contractor
+                                    </p>
+                                    <p className="font-bold text-xl text-primary truncate overflow-hidden text-ellipsis">
+                                        {holding.vendor.name}
+                                    </p>
+                                    <div className="mt-1.5">
+                                        <StatusBadge status={holding.vendor.isActive ? "ACTIVE" : "INACTIVE"} />
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                     {holding.vendor.kycDocumentUrl && (
