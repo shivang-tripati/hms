@@ -17,8 +17,22 @@ export async function GET(request: NextRequest) {
         if (status) where.status = status;
         if (from || to) {
             where.entryDate = {};
-            if (from) where.entryDate.gte = new Date(from);
-            if (to) where.entryDate.lte = new Date(to);
+            if (from) {
+                if (from.includes("T")) {
+                    where.entryDate.gte = new Date(from);
+                } else {
+                    const [year, month, day] = from.split("-").map(Number);
+                    where.entryDate.gte = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+                }
+            }
+            if (to) {
+                if (to.includes("T")) {
+                    where.entryDate.lte = new Date(to);
+                } else {
+                    const [year, month, day] = to.split("-").map(Number);
+                    where.entryDate.lte = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+                }
+            }
         }
 
         const entries = await (prisma as any).journalEntry.findMany({

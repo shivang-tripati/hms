@@ -18,11 +18,18 @@ export function JournalFilters() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
+    const parseDateStr = (dateStr: string | null) => {
+        if (!dateStr) return undefined;
+        if (dateStr.includes("T")) return new Date(dateStr);
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(year, month - 1, day);
+    };
+
     const [fromDate, setFromDate] = useState<Date | undefined>(
-        searchParams.get("fromDate") ? new Date(searchParams.get("fromDate")!) : undefined
+        parseDateStr(searchParams.get("fromDate"))
     );
     const [toDate, setToDate] = useState<Date | undefined>(
-        searchParams.get("toDate") ? new Date(searchParams.get("toDate")!) : undefined
+        parseDateStr(searchParams.get("toDate"))
     );
 
     const handleApply = () => {

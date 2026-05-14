@@ -48,6 +48,13 @@ export default async function JournalEntriesPage({
 
     const entries = await apiFetch<any[]>(`/api/accounting/journal-entries?${params.toString()}`);
 
+    const parseDateStr = (dateStr: string | undefined) => {
+        if (!dateStr) return undefined;
+        if (dateStr.includes("T")) return new Date(dateStr);
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(year, month - 1, day);
+    };
+
     return (
         <div className="space-y-6">
             <PageHeader
@@ -57,11 +64,11 @@ export default async function JournalEntriesPage({
                         <div className="flex items-center gap-1">
                             Showing entries from{" "}
                             <span className="font-medium text-foreground">
-                                {fromDate ? format(new Date(fromDate), "dd MMM yyyy") : "Start"}
+                                {fromDate ? format(parseDateStr(fromDate)!, "dd MMM yyyy") : "Start"}
                             </span>
                             {" "}to{" "}
                             <span className="font-medium text-foreground">
-                                {toDate ? format(new Date(toDate), "dd MMM yyyy") : "Present"}
+                                {toDate ? format(parseDateStr(toDate)!, "dd MMM yyyy") : "Present"}
                             </span>
                         </div>
                     ) : (

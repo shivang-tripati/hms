@@ -34,13 +34,20 @@ export default async function TrialBalancePage({
 
     const params = new URLSearchParams();
     if (fromDate) {
-        params.append("fromDate", format(fromDate, "yyyy-MM-dd"));
+        params.append("fromDate", fromDate);
     }
     if (toDate) {
-        params.append("toDate", format(toDate, "yyyy-MM-dd"));
+        params.append("toDate", toDate);
     }
 
     const data = await apiFetch<any>(`/api/accounting/reports/trial-balance?${params.toString()}`);
+
+    const parseDateStr = (dateStr: string | undefined) => {
+        if (!dateStr) return undefined;
+        if (dateStr.includes("T")) return new Date(dateStr);
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(year, month - 1, day);
+    };
 
     return (
         <div className="space-y-6">
@@ -52,11 +59,11 @@ export default async function TrialBalancePage({
                             <>
                                 Showing balances from{" "}
                                 <span className="font-medium text-foreground">
-                                    {fromDate ? format(new Date(fromDate), "dd MMM yyyy") : "Start"}
+                                    {fromDate ? format(parseDateStr(fromDate)!, "dd MMM yyyy") : "Start"}
                                 </span>
                                 {" "}to{" "}
                                 <span className="font-medium text-foreground">
-                                    {toDate ? format(new Date(toDate), "dd MMM yyyy") : "Present"}
+                                    {toDate ? format(parseDateStr(toDate)!, "dd MMM yyyy") : "Present"}
                                 </span>
                             </>
                         ) : (

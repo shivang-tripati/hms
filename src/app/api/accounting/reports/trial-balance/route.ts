@@ -25,10 +25,29 @@ export async function GET(request: NextRequest) {
         
         if (fromDate || toDate) {
             dateFilter.entryDate = {};
-            if (fromDate) dateFilter.entryDate.gte = new Date(fromDate);
-            if (toDate) dateFilter.entryDate.lte = new Date(toDate);
+            if (fromDate) {
+                if (fromDate.includes("T")) {
+                    dateFilter.entryDate.gte = new Date(fromDate);
+                } else {
+                    const [year, month, day] = fromDate.split("-").map(Number);
+                    dateFilter.entryDate.gte = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+                }
+            }
+            if (toDate) {
+                if (toDate.includes("T")) {
+                    dateFilter.entryDate.lte = new Date(toDate);
+                } else {
+                    const [year, month, day] = toDate.split("-").map(Number);
+                    dateFilter.entryDate.lte = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+                }
+            }
         } else if (asOfDate) {
-            dateFilter.entryDate = { lte: new Date(asOfDate) };
+            if (asOfDate.includes("T")) {
+                dateFilter.entryDate = { lte: new Date(asOfDate) };
+            } else {
+                const [year, month, day] = asOfDate.split("-").map(Number);
+                dateFilter.entryDate = { lte: new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999)) };
+            }
         }
 
         // Get all non-group ledgers
