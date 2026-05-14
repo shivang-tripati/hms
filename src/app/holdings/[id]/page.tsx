@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatArea, formatDate, formatEnum } from "@/lib/utils";
-import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation, ClipboardCheck } from "lucide-react";
+import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation, ClipboardCheck, User } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { auth } from "@/auth";
@@ -51,24 +51,32 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
     const isExpired = activeContract && new Date(activeContract.endDate).getTime() < Date.now();
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <PageHeader
-                    title={holding.name}
-                    description={`Code: ${holding.code} | ${holding.address}`}
-                    icon={MapPin}
-                />
-                <div className="flex items-center gap-2">
-                    <StatusBadge status={holding.status} />
+        <div className="space-y-6 px-1 sm:px-0">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+                <div className="min-w-0 flex-1">
+                    <PageHeader
+                        title={holding.name}
+                        description={
+                            <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1">
+                                <span className="font-semibold text-primary/80 shrink-0">Code: {holding.code}</span>
+                                <span className="hidden sm:inline text-muted-foreground/40">•</span>
+                                <span className="truncate break-words">{holding.address}</span>
+                            </div>
+                        }
+                        icon={MapPin}
+                    />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <StatusBadge status={holding.status} className="h-9 px-4" />
                     {(role === "ADMIN" || role === "STAFF") && (
-                        <Button asChild variant="outline" size="sm" className="bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700">
+                        <Button asChild variant="outline" size="sm" className="h-9 bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700 flex-1 sm:flex-none">
                             <Link href={`/holdings/${id}/inspect`}>
                                 <ClipboardCheck className="mr-2 h-4 w-4" /> Report Inspection
                             </Link>
                         </Button>
                     )}
                     {holding.latitude && holding.longitude && (
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="h-9 flex-1 sm:flex-none">
                             <a
                                 href={`https://maps.google.com/?q=${holding.latitude},${holding.longitude}`}
                                 target="_blank"
@@ -79,7 +87,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                         </Button>
                     )}
                     {role === "ADMIN" && (
-                        <Button asChild variant="outline" size="sm">
+                        <Button asChild variant="outline" size="sm" className="h-9 flex-1 sm:flex-none">
                             <Link href={`/holdings/${id}/edit`}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit
                             </Link>
@@ -255,7 +263,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
                 {/* Maintenance History (Admin Only) */}
                 {role === "ADMIN" && (
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                         <MaintenanceHistory records={holding.maintenanceRecords || []} />
                     </div>
                 )}
@@ -263,80 +271,68 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
                 {/* Vendor Details */}
                 {role === "ADMIN" && holding.vendor && (
-                    <Card className="col-span-3">
-                        <CardHeader>
-                            <CardTitle className="text-base">Vendor Details</CardTitle>
+                    <Card className="col-span-1 md:col-span-3 shadow-sm border-border/60">
+                        <CardHeader className="pb-3 border-b bg-muted/30">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <User className="h-4 w-4 text-primary" /> Vendor Details
+                            </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                            <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-                                <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Vendor Name</p>
-                                <p className="font-bold text-primary">{holding.vendor.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Status: {holding.vendor.isActive ? "Active" : "Inactive"}
-                                </p>
-                            </div>
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-muted-foreground mb-1">Contact Person</p>
-                                    <p className="font-medium">{holding.vendor.contactPerson || "N/A"}</p>
+                        <CardContent className="space-y-6 pt-6 text-sm">
+                            <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div className="min-w-0">
+                                    <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider font-bold">Primary Contractor</p>
+                                    <p className="font-bold text-xl text-primary truncate">{holding.vendor.name}</p>
+                                    <div className="mt-1.5"><StatusBadge status={holding.vendor.isActive ? "ACTIVE" : "INACTIVE"} /></div>
                                 </div>
-                                <div>
-                                    <p className="text-muted-foreground mb-1">Phone</p>
-                                    <p className="font-medium">{holding.vendor.phone || "N/A"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground mb-1">Email</p>
-                                    <p className="font-medium">{holding.vendor.email || "N/A"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground mb-1">City</p>
-                                    <p className="font-medium">{holding.vendor.city?.name || "N/A"}</p>
-                                </div>
-                                <div className="sm:col-span-2">
-                                    <p className="text-muted-foreground mb-1">Address</p>
-                                    <p className="font-medium">{holding.vendor.address || "N/A"}</p>
-                                </div>
-                            </div>
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-muted-foreground mb-1">GST Number</p>
-                                    <p className="font-medium">{holding.vendor.gstNumber || "N/A"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground mb-1">PAN Number</p>
-                                    <p className="font-medium">{holding.vendor.panNumber || "N/A"}</p>
-                                </div>
-                            </div>
-
-                            <Separator />
-
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <p className="text-muted-foreground">KYC Document</p>
-                                    {holding.vendor.kycDocumentUrl ? (
-                                        <Button asChild variant="outline" className="w-full" size="sm">
+                                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                    {holding.vendor.kycDocumentUrl && (
+                                        <Button asChild variant="outline" size="sm" className="bg-background flex-1 sm:flex-none">
                                             <a href={holding.vendor.kycDocumentUrl} target="_blank" rel="noopener noreferrer">
-                                                View KYC Document
+                                                KYC Doc
                                             </a>
                                         </Button>
-                                    ) : (
-                                        <p className="font-medium">N/A</p>
+                                    )}
+                                    {holding.vendor.agreementDocumentUrl && (
+                                        <Button asChild variant="outline" size="sm" className="bg-background flex-1 sm:flex-none">
+                                            <a href={holding.vendor.agreementDocumentUrl} target="_blank" rel="noopener noreferrer">
+                                                Agreement
+                                            </a>
+                                        </Button>
                                     )}
                                 </div>
+                            </div>
 
-                                <div className="space-y-2">
-                                    <p className="text-muted-foreground">Agreement Document</p>
-                                    {holding.vendor.agreementDocumentUrl ? (
-                                        <Button asChild variant="outline" className="w-full" size="sm">
-                                            <a href={holding.vendor.agreementDocumentUrl} target="_blank" rel="noopener noreferrer">
-                                                View Agreement
-                                            </a>
-                                        </Button>
-                                    ) : (
-                                        <p className="font-medium">N/A</p>
-                                    )}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Contact Person</p>
+                                    <p className="font-semibold text-base">{holding.vendor.contactPerson || "N/A"}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Phone Number</p>
+                                    <p className="font-semibold text-base">{holding.vendor.phone || "N/A"}</p>
+                                </div>
+                                <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Email Address</p>
+                                    <p className="font-semibold text-base break-all">{holding.vendor.email || "N/A"}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">City</p>
+                                    <p className="font-semibold text-base">{holding.vendor.city?.name || "N/A"}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-4 rounded-lg bg-muted/30">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">GST Identification</p>
+                                    <p className="font-mono font-medium">{holding.vendor.gstNumber || "N/A"}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Permanent Account (PAN)</p>
+                                    <p className="font-mono font-medium">{holding.vendor.panNumber || "N/A"}</p>
+                                </div>
+                                <div className="sm:col-span-2 space-y-1">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase">Registered Address</p>
+                                    <p className="font-medium text-balance">{holding.vendor.address || "N/A"}</p>
                                 </div>
                             </div>
                         </CardContent>
