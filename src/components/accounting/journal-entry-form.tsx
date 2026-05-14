@@ -2,16 +2,11 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import {
     Select,
     SelectContent,
@@ -110,28 +105,10 @@ export function JournalEntryForm({ ledgers }: JournalEntryFormProps) {
             <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
                     <Label>Entry Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !entryDate && "text-muted-foreground",
-                                )}
-                            >
-                                {entryDate ? format(entryDate, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={entryDate}
-                                onSelect={(d) => d && setEntryDate(d)}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
+                    <DatePicker
+                        value={entryDate}
+                        onChange={(d) => d && setEntryDate(d)}
+                    />
                 </div>
 
                 <div className="flex flex-col gap-2">

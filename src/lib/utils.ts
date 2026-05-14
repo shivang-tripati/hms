@@ -46,6 +46,7 @@ export function getStatusColor(status: string): string {
     CANCELLED: "bg-red-500/15 text-red-700 dark:text-red-400",
     // Task status
     IN_PROGRESS: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+    SCHEDULED: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
     // Invoice status
     DRAFT: "bg-gray-500/15 text-gray-700 dark:text-gray-400",
     SENT: "bg-blue-500/15 text-blue-700 dark:text-blue-400",

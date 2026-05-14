@@ -27,9 +27,11 @@ export const authConfig = {
                 pathname.match(/\.(png|jpg|jpeg|gif|svg|webp)$/);
 
             const isApiAuthRoute = pathname.startsWith("/api/auth");
+            const isCronRoute = pathname.startsWith("/api/cron/");
+
             const isPublicRoute = ["/login"].includes(pathname);
 
-            if (isApiAuthRoute || isStaticAsset) return true;
+            if (isApiAuthRoute || isStaticAsset || isCronRoute) return true;
 
             if (isPublicRoute) {
                 if (isLoggedIn) return Response.redirect(new URL("/", nextUrl));

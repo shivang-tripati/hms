@@ -9,7 +9,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         const contract = await prisma.ownershipContract.findUnique({
             where: { id },
             include: {
-                holding: { include: { city: true, holdingType: true } },
+                holding: { 
+                    include: { 
+                        city: true, 
+                        holdingType: true,
+                        ownershipContracts: {
+                            include: { vendor: true },
+                            orderBy: { startDate: "desc" }
+                        }
+                    } 
+                },
                 vendor: { select: { id: true, name: true, phone: true, kycDocumentUrl: true } },
             },
         });
@@ -50,10 +59,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 return NextResponse.json({ error: "An active contract already exists for this hoarding" }, { status: 409 });
             }
         }
+        // Auto-update status to ACTIVE if dates are extended and it was EXPIRED
+        const existingContract = await prisma.ownershipContract.findUnique({ where: { id } });
+        let status = parsed.status;
+        if (existingContract?.status === "EXPIRED" && new Date(parsed.endDate) > new Date()) {
+            status = "ACTIVE";
+        }
+
         const contract = await prisma.ownershipContract.update({
             where: { id },
             data: {
                 ...parsed,
+                status,
             },
         });
 

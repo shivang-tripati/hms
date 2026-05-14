@@ -74,6 +74,7 @@ export function TrialBalanceFilters() {
                             mode="single"
                             selected={fromDate}
                             onSelect={setFromDate}
+                            disabled={(date) => !!toDate && date > toDate}
                             initialFocus
                         />
                     </PopoverContent>
@@ -100,6 +101,7 @@ export function TrialBalanceFilters() {
                             mode="single"
                             selected={toDate}
                             onSelect={setToDate}
+                            disabled={(date) => !!fromDate && date < fromDate}
                             initialFocus
                         />
                     </PopoverContent>

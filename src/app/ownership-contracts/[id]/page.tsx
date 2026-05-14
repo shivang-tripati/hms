@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatCurrency, formatEnum } from "@/lib/utils";
 import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays, Paperclip, Download } from "lucide-react";
 import Link from "next/link";
+import { ContractHistory } from "@/components/contracts/contract-history";
 
 interface ContractDetailsPageProps {
     params: {
@@ -187,6 +188,14 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Contract History */}
+                <div className="col-span-full">
+                    <ContractHistory 
+                        contracts={contract.holding?.ownershipContracts || []} 
+                        title="Hoarding Contract History"
+                    />
+                </div>
             </div>
         </div>
     );

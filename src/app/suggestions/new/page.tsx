@@ -10,7 +10,7 @@ export default async function NewSuggestionPage() {
     const cities = await apiFetch<any[]>("/api/master-data/cities");
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
                 title="Propose Location"
                 description="Suggest a new site or terrace for billboard installation."

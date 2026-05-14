@@ -91,7 +91,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2">
                 {/* Expiring Soon */}
                 <Card className="md:col-span-1 border border-amber-500/30 bg-amber-500/5">
                     <CardHeader>
@@ -183,7 +183,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
                 </Card>
 
                 {/* Upcoming Tasks */}
-                <Card className="md:col-span-1 border border-indigo-500/30 bg-indigo-500/5">
+                {/* <Card className="md:col-span-1 border border-indigo-500/30 bg-indigo-500/5">
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
                             <CalendarClock className="h-5 w-5 text-indigo-600" />
@@ -230,7 +230,7 @@ export function AdminDashboard({ stats }: AdminDashboardProps) {
                             <p className="text-sm text-muted-foreground py-4 text-center">No upcoming tasks scheduled.</p>
                         )}
                     </CardContent>
-                </Card>
+                </Card> */}
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

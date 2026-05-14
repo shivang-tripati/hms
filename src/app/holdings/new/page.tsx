@@ -58,7 +58,7 @@ export default async function NewHoldingPage({ searchParams }: NewHoldingPagePro
     // Note: We use 'as any' for Decimal/Number compatibility in initialData partial
 
     return (
-        <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <PageHeader
                 title="New Holding"
                 description="Add a new holding to your inventory."

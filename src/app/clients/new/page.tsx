@@ -19,7 +19,7 @@ export default async function NewClientPage() {
     const cities = await apiFetch<any[]>("/api/master-data/cities");
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
                 title="Add New Client"
                 description="Register a new advertiser or agency."

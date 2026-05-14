@@ -56,10 +56,10 @@ export const holdingSchema = z.object({
     holdingTypeId: z.string().min(1, "Holding type is required"),
     hsnCodeId: z.string().min(1, "HSN code is required"),
 }).superRefine((data, ctx) => {
-    if (data.assetType === "RENTED" && (!data.vendorId || data.vendorId.trim() === "")) {
+    if (!data.vendorId || data.vendorId.trim() === "") {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Vendor is required when asset type is rented",
+            code: "custom",
+            message: "Vendor is required",
             path: ["vendorId"],
         });
     }
@@ -89,6 +89,14 @@ export const ownershipContractSchema = z.object({
     ownerEmail: z.string().email("Invalid email").optional().or(z.literal("")),
     ownerAddress: z.string().optional(),
     ownerKycUrl: z.string().optional(),
+}).superRefine((data, ctx) => {
+    if (data.endDate < data.startDate) {
+        ctx.addIssue({
+            code: "custom",
+            message: "End date cannot be before start date",
+            path: ["endDate"],
+        });
+    }
 });
 
 export type OwnershipContractFormData = z.infer<typeof ownershipContractSchema>;
@@ -125,6 +133,14 @@ export const bookingSchema = z.object({
     notes: z.string().optional(),
     clientId: z.string().min(1, "Client is required"),
     holdingId: z.string().min(1, "Holding is required"),
+}).superRefine((data, ctx) => {
+    if (data.endDate < data.startDate) {
+        ctx.addIssue({
+            code: "custom",
+            message: "End date cannot be before start date",
+            path: ["endDate"],
+        });
+    }
 });
 
 export type BookingFormData = z.infer<typeof bookingSchema>;
@@ -141,6 +157,14 @@ export const advertisementSchema = z.object({
     status: z.enum(["PENDING", "INSTALLED", "ACTIVE", "REMOVED", "COMPLETED"]).default("PENDING"),
     notes: z.string().optional(),
     bookingId: z.string().min(1, "Booking is required"),
+}).superRefine((data, ctx) => {
+    if (data.installationDate && data.removalDate && data.removalDate < data.installationDate) {
+        ctx.addIssue({
+            code: "custom",
+            message: "Removal date cannot be before installation date",
+            path: ["removalDate"],
+        });
+    }
 });
 
 export type AdvertisementFormData = z.infer<typeof advertisementSchema>;
@@ -153,7 +177,7 @@ export const taskSchema = z.object({
     taskType: z.enum(["INSTALLATION", "MOUNTING", "MAINTENANCE", "INSPECTION", "RELOCATION"]),
     priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
     status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).default("PENDING"),
-    scheduledDate: z.coerce.date(),
+    scheduledDate: z.coerce.date({ message: "Scheduled date is required" }),
     completedDate: z.coerce.date().optional(),
     assignedTo: z.string().optional(),
     estimatedCost: z.coerce.number().optional(),
@@ -171,7 +195,7 @@ export const taskSchema = z.object({
     if (data.taskType === "INSTALLATION" &&
         (!data.holdingId || data.holdingId.trim() === "")) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Hoarding is required for Installation tasks",
             path: ["holdingId"],
         });
@@ -180,7 +204,7 @@ export const taskSchema = z.object({
     if (data.taskType === "MOUNTING" &&
         (!data.bookingId || data.bookingId.trim() === "")) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Booking is required for Mounting tasks",
             path: ["bookingId"],
         });
@@ -189,7 +213,7 @@ export const taskSchema = z.object({
     if (data.taskType === "MAINTENANCE" &&
         (!data.holdingId || data.holdingId.trim() === "")) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Holding is required for Maintenance tasks",
             path: ["holdingId"],
         });
@@ -198,12 +222,19 @@ export const taskSchema = z.object({
     if (data.taskType === "RELOCATION" &&
         (!data.holdingId || data.holdingId.trim() === "")) {
         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: "Hoarding is required for Relocation tasks",
             path: ["holdingId"],
         });
     }
     // INSPECTION: holdingId is optional
+    if (data.completedDate && data.scheduledDate && data.completedDate < data.scheduledDate) {
+        ctx.addIssue({
+            code: "custom",
+            message: "Completed date cannot be before scheduled date",
+            path: ["completedDate"],
+        });
+    }
 });
 
 export type TaskFormData = z.infer<typeof taskSchema>;
@@ -247,6 +278,14 @@ export const invoiceSchema = z.object({
     clientId: z.string().min(1, "Client is required"),
     bookingId: z.string().min(1, "Booking is required"),
     hsnCodeId: z.string().min(1, "HSN code is required"),
+}).superRefine((data, ctx) => {
+    if (data.dueDate < data.invoiceDate) {
+        ctx.addIssue({
+            code: "custom",
+            message: "Due date cannot be before invoice date",
+            path: ["dueDate"],
+        });
+    }
 });
 
 export type InvoiceFormData = z.infer<typeof invoiceSchema>;

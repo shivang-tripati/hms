@@ -22,7 +22,7 @@ export default async function NewContractPage() {
     ]);
 
     return (
-        <div className="space-y-6 max-w-3xl mx-auto">
+        <div className="space-y-6 max-w-5xl mx-auto">
             <PageHeader
                 title="New Ownership Contract"
                 description="Create a new ownership contract for a holding."

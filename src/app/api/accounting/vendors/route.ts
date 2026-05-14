@@ -22,7 +22,13 @@ export async function GET(request: NextRequest) {
             orderBy: { name: "asc" },
             include: {
                 city: true,
-                ledger: { select: { id: true, name: true, code: true } },
+                ledger: { 
+                    include: {
+                        _count: {
+                            select: { journalLines: true }
+                        }
+                    }
+                },
                 contracts: { select: { id: true, contractNumber: true, holdingId: true, status: true } },
                 holdings: { select: { id: true, code: true, name: true, assetType: true } },
                 _count: { select: { payments: true, holdings: true, contracts: true } },

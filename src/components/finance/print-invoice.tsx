@@ -167,22 +167,39 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
 
   const holdingAddress = holding
     ? [
-        holding.name,
-        holding.address,
-        holding.city?.name,
-      ]
-        .filter(Boolean)
-        .join(", ")
+      holding.name,
+      holding.address,
+      holding.city?.name,
+    ]
+      .filter(Boolean)
+      .join(", ")
     : "-";
 
   const billingStart = new Date(booking.startDate);
   const billingEnd = new Date(booking.endDate);
+
+  // Calculate months difference
   const diffMonths =
     (billingEnd.getFullYear() - billingStart.getFullYear()) * 12 +
     (billingEnd.getMonth() - billingStart.getMonth()) +
     1;
-  const durationLabel =
-    diffMonths === 1 ? "1 Month" : diffMonths === 12 ? "1 Year" : `${diffMonths} Months`;
+
+  // Calculate days difference
+  const diffTime = billingEnd.getTime() - billingStart.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  // Build duration label
+  let durationLabel;
+  if (diffMonths === 1 && diffDays < 31) {
+    durationLabel = `${diffDays} Days`;
+  } else if (diffMonths === 12 && diffDays >= 365) {
+    durationLabel = "1 Year";
+  } else {
+    durationLabel = `${diffMonths} Months (${diffDays} Days)`;
+  }
+
+  console.log(durationLabel);
+
 
   return (
     <>
@@ -450,7 +467,7 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
                 <th style={{ width: "32%" }}>Description / Location</th>
                 <th style={{ width: "11%" }}>SAC</th>
                 <th style={{ width: "12%" }}>Size / Type</th>
-                <th style={{ width: "11%" }}>Qty</th>
+                <th style={{ width: "11%" }}>Qty / Days</th>
                 <th style={{ width: "12%" }}>Rate</th>
                 <th style={{ width: "10%" }}>{isInterState ? `IGST ${igstRate}%` : `GST ${gstRate}%`}</th>
                 <th style={{ width: "12%" }}>Amount</th>

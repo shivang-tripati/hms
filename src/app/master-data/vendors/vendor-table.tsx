@@ -138,7 +138,19 @@ function VendorActions({ vendor }: { vendor: any }) {
                 size="sm"
                 variant="ghost"
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={() => {
+                    const hasHoldings = vendor._count?.holdings > 0;
+                    const hasContracts = vendor._count?.contracts > 0;
+                    const hasPayments = vendor._count?.payments > 0;
+                    const hasLedgerTransactions = vendor.ledger?._count?.journalLines > 0;
+                    const hasLedger = !!vendor.ledger;
+
+                    if (hasHoldings || hasContracts || hasPayments || hasLedgerTransactions || hasLedger) {
+                        toast.error("Cannot delete vendor. It is linked to other transactions (Contracts, Hoardings, or Ledger). Please follow the reverse process to delete.");
+                        return;
+                    }
+                    setShowDeleteDialog(true);
+                }}
             >
                 <Trash2 className="h-4 w-4" />
             </Button>

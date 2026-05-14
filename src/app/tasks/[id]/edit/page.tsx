@@ -59,7 +59,7 @@ export default async function EditTaskPage({ params }: EditTaskPageProps) {
     );
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
                 title={`Edit Task`}
                 description="Update task details and status."

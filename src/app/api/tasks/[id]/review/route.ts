@@ -139,7 +139,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
                 // If this is a MAINTENANCE task, update holding and create record
                 if (task.taskType === "MAINTENANCE" && task.holdingId) {
-                    const holding = await tx.holding.findUnique({ where: { id: task.holdingId } });
+                    const holding = await tx.holding.findUnique({ where: { id: task.holdingId }, select: { maintenanceCycle: true, nextMaintenanceDue: true, status: true } });
                     if (holding) {
                         const cycleDays = holding.maintenanceCycle || 90;
                         const nextDueDate = new Date();
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
                             where: { id: task.holdingId },
                             data: {
                                 nextMaintenanceDue: nextDueDate,
-                                status: holding.status === "UNDER_MAINTENANCE" ? "AVAILABLE" : holding.status,
+                                status: holding.status === "UNDER_MAINTENANCE" ? "AVAILABLE" : "AVAILABLE",
                             }
                         });
 

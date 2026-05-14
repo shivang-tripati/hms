@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import logger from "@/lib/logger";
 
 export async function GET() {
     try {
         console.log("[GET /api/dashboard] Starting fetching stats...");
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        const nextWeek = new Date(today);
-        nextWeek.setDate(today.getDate() + 7);
+        const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const nextWeek = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 7));
 
+        const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+
+        logger.info("start all")
         console.log("[GET /api/dashboard] Running Promise.all for stats...");
         const [
             totalHoldings,
@@ -26,8 +28,6 @@ export async function GET() {
             prisma.client.count().catch((err: Error) => { console.error("Error in totalClients:", err); throw err; }),
             prisma.booking.count({
                 where: {
-                    startDate: { lte: now },
-                    endDate: { gte: now },
                     status: { in: ["CONFIRMED", "ACTIVE"] },
                 },
             }).catch((err: Error) => { console.error("Error in activeBookings:", err); throw err; }),
@@ -61,13 +61,13 @@ export async function GET() {
             }).catch((err: Error) => { console.error("Error in expiringBookings:", err); throw err; }),
             prisma.task.findMany({
                 where: {
-                    status: { in: ["PENDING", "IN_PROGRESS"] },
                     scheduledDate: {
                         gte: today,
                         lte: nextWeek
-                    }
+                    },
+                    status: { in: ["PENDING", "IN_PROGRESS"] },
                 },
-                take: 5,
+                take: 10,
                 orderBy: { scheduledDate: "asc" },
                 include: {
                     holding: { select: { code: true } },
@@ -75,7 +75,6 @@ export async function GET() {
                 }
             }).catch((err: Error) => { console.error("Error in upcomingTasks:", err); console.log(err); return []; }),
         ]);
-
         console.log("[GET /api/dashboard] Stats fetched successfully.");
         const monthlyRevenue = monthlyRevenueAgg._sum.totalAmount
             ? Number(monthlyRevenueAgg._sum.totalAmount)

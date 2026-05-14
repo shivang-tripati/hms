@@ -91,6 +91,10 @@ export async function getClientListReport(filters?: { startDate?: Date; endDate?
       avgMonthlySpend = totalInvoiced / Math.max(monthsDiff, 1);
     }
 
+    console.log("clients ", client);
+    console.log("active bookings filter", client.bookings.filter(
+      (b) => b.status === "ACTIVE" || b.status === "CONFIRMED"
+    ).length);
     return {
       clientId: client.id,
       clientName: client.name,
@@ -745,8 +749,6 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     // Active bookings
     prisma.booking.count({
       where: {
-        startDate: { lte: now },
-        endDate: { gte: now },
         status: { in: ["CONFIRMED", "ACTIVE"] },
       },
     }),

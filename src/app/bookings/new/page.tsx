@@ -25,7 +25,7 @@ export default async function NewBookingPage() {
 
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
                 title="Create New Booking"
                 description="Reserve a holding for a client campaign."

@@ -51,7 +51,19 @@ export const ContractListColumns = [
     },
     {
         header: "Period",
-        cell: (row: any) => `${formatDate(row.startDate)} – ${formatDate(row.endDate)}`,
+        cell: (row: any) => {
+            const isOverdue = new Date(row.endDate).getTime() < Date.now();
+            return (
+                <div className="flex flex-col gap-1">
+                    <span>{formatDate(row.startDate)} – {formatDate(row.endDate)}</span>
+                    {isOverdue && row.status === "ACTIVE" && (
+                        <Badge variant="destructive" className="text-[9px] py-0 h-4 w-fit">
+                            Renewal Due
+                        </Badge>
+                    )}
+                </div>
+            );
+        },
     },
     {
         header: "Status",

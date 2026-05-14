@@ -25,7 +25,7 @@ export default async function NewReceiptPage() {
     });
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
+        <div className="space-y-6 max-w-4xl mx-auto">
             <PageHeader
                 title="Record Payment"
                 description="Create a payment receipt for an invoice."

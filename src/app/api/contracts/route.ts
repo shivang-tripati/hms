@@ -32,7 +32,13 @@ export async function POST(request: NextRequest) {
         });
         if (!holding) return NextResponse.json({ error: "Holding not found" }, { status: 404 });
         if (holding.vendorId && holding.vendorId !== parsed.vendorId) {
-            return NextResponse.json({ error: "Holding is already linked to a different vendor" }, { status: 400 });
+            // Check if there's an active contract
+            const activeContract = await prisma.ownershipContract.findFirst({
+                where: { holdingId: parsed.holdingId, status: "ACTIVE" },
+            });
+            if (activeContract) {
+                return NextResponse.json({ error: "Holding is already linked to an active contract with a different vendor" }, { status: 400 });
+            }
         }
         if (parsed.status === "ACTIVE") {
             const existingActive = await prisma.ownershipContract.findFirst({

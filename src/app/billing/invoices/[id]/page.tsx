@@ -93,7 +93,7 @@ export default async function InvoiceDetailsPage({ params }: InvoiceDetailsPageP
                                 <thead className="bg-muted text-muted-foreground font-medium border-b">
                                     <tr>
                                         <th className="p-3">Description</th>
-                                        <th className="p-3 text-right">Qty</th>
+                                        <th className="p-3 text-right">Qty / Days</th>
                                         <th className="p-3 text-right">Rate</th>
                                         <th className="p-3 text-right">Taxable</th>
                                         <th className="p-3 text-right">GST</th>

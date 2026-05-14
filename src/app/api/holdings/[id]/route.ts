@@ -72,17 +72,36 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const body = await request.json();
         const parsed = holdingSchema.parse(body);
         const { images, ...rest } = parsed;
+
+        // 1. Fetch current holding to check existing cycle
         const holding = await prisma.$transaction(async (tx) => {
+            // 1. Fetch current state INSIDE the transaction
+            const currentHolding = await tx.holding.findUnique({
+                where: { id },
+                select: { maintenanceCycle: true, nextMaintenanceDue: true }
+            });
+
+            let updateData: any = { ...rest };
+
+            // 2. Check if we need to reset the clock
+            const cycleChanged = parsed.maintenanceCycle !== currentHolding?.maintenanceCycle;
+            const isMissingDate = !currentHolding?.nextMaintenanceDue;
+
+            if (cycleChanged || isMissingDate) {
+                const nextDue = new Date();
+                nextDue.setDate(nextDue.getDate() + (parsed.maintenanceCycle || 90));
+                updateData.nextMaintenanceDue = nextDue;
+            }
+
             const updatedHolding = await tx.holding.update({
                 where: { id },
-                data: {
-                    ...rest,
-                },
+                data: updateData
             });
 
             if (images) {
                 // Delete existing photos not in the new list
                 const newUrls = images.map((img: any) => typeof img === "string" ? img : img.url);
+
                 await (tx as any).holdingPhoto.deleteMany({
                     where: {
                         holdingId: id,
@@ -95,6 +114,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                     where: { holdingId: id }
                 });
                 const existingUrls = existingPhotos.map(p => p.url);
+
                 const photosToAdd = images.filter((img: any) => {
                     const url = typeof img === "string" ? img : img.url;
                     return !existingUrls.includes(url);
@@ -114,7 +134,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
                 }
             }
 
-            return await (tx as any).holding.findUnique({
+            return await tx.holding.findUnique({
                 where: { id },
                 include: { holdingPhotos: true }
             });

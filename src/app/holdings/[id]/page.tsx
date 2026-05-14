@@ -12,6 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { auth } from "@/auth";
 import { PhotoGallery } from "@/components/shared/photo-gallery";
 import { InspectionHistory } from "@/components/holdings/inspection-history";
+import { MaintenanceHistory } from "@/components/holdings/maintenance-history";
+import { ContractHistory } from "@/components/contracts/contract-history";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface HoldingDetailsPageProps {
     params: {
@@ -41,6 +45,10 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
     // Create a shadow copy to avoid mutating the original if needed, but here we just re-map
     const viewHolding = { ...holding, bookings: displayBookings };
+
+    const activeContract = holding.ownershipContracts?.find((c: any) => c.status === "ACTIVE");
+    const isExpiringSoon = activeContract && new Date(activeContract.endDate).getTime() < Date.now() + (30 * 24 * 60 * 60 * 1000);
+    const isExpired = activeContract && new Date(activeContract.endDate).getTime() < Date.now();
 
     return (
         <div className="space-y-6">
@@ -79,6 +87,19 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                     )}
                 </div>
             </div>
+
+            {isExpiringSoon && (
+                <Alert variant={isExpired ? "destructive" : "default"} className={isExpired ? "" : "border-amber-200 bg-amber-50 text-amber-900"}>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>{isExpired ? "Contract Expired" : "Contract Expiring Soon"}</AlertTitle>
+                    <AlertDescription>
+                        {isExpired
+                            ? `The ownership contract for this hoarding expired on ${formatDate(activeContract.endDate)}.`
+                            : `The ownership contract for this hoarding will expire on ${formatDate(activeContract.endDate)}. Please initiate renewal.`
+                        }
+                    </AlertDescription>
+                </Alert>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
@@ -194,7 +215,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
 
                 {/* Images */}
-                <Card className="col-span-2">
+                <Card className="col-span-3">
                     <CardHeader>
                         <CardTitle className="text-base">Images</CardTitle>
                     </CardHeader>
@@ -208,13 +229,31 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </Card>
 
                 {/* Inspection History */}
-                <div className="col-span-2">
+                <div className="col-span-3">
                     <InspectionHistory inspections={holding.inspections || []} />
                 </div>
 
+                {/* Contract History (Admin Only) */}
+                {role === "ADMIN" && (
+                    <div className="col-span-3">
+                        <ContractHistory contracts={holding.ownershipContracts || []} />
+                    </div>
+                )}
+
+
+
+
+                {/* Maintenance History (Admin Only) */}
+                {role === "ADMIN" && (
+                    <div className="col-span-3">
+                        <MaintenanceHistory records={holding.maintenanceRecords || []} />
+                    </div>
+                )}
+
+
                 {/* Vendor Details */}
                 {role === "ADMIN" && holding.vendor && (
-                    <Card className="col-span-2">
+                    <Card className="col-span-3">
                         <CardHeader>
                             <CardTitle className="text-base">Vendor Details</CardTitle>
                         </CardHeader>

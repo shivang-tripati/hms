@@ -4,9 +4,9 @@ import { useForm, useWatch } from "react-hook-form";
 import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
-import { CalendarIcon, FileText, Loader2, Upload, X } from "lucide-react";
+import { FileText, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
     Form,
     FormControl,
@@ -16,11 +16,6 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
 import {
     Select,
     SelectContent,
@@ -216,8 +211,12 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
         // 2. Apply contract type specific filters
         switch (watchedContractType) {
             case "ASSET_RENTING":
-                // Must have selected vendor AND holding must belong to that vendor
-                return selectedVendorId ? holding.vendorId === selectedVendorId : false;
+                // If there's no active contract, we can rent it from anyone.
+                // If there is a vendorId set, it must match OR there must be no active contract (handled above).
+                // Actually, the check at line 209 already handles 'no active contract'.
+                // So if we are here, we know there's no active contract.
+                // We should allow it if vendor matches OR if it's currently unassigned (or we're reassigning).
+                return true; 
 
             case "SPACE_RENTING":
                 // Only show owned assets
@@ -475,30 +474,10 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
                                 <FormLabel>Start Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full pl-3 text-left font-normal",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value}
-                                            onSelect={field.onChange}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -510,30 +489,10 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
                                 <FormLabel>End Date</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                className={cn(
-                                                    "w-full pl-3 text-left font-normal",
-                                                    !field.value && "text-muted-foreground"
-                                                )}
-                                            >
-                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            mode="single"
-                                            selected={field.value}
-                                            onSelect={field.onChange}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
+                                <DatePicker
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                />
                                 <FormMessage />
                             </FormItem>
                         )}

@@ -53,11 +53,15 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     const { images, ...rest } = parsed;
     const derivedStatus: any = parsed.status === "AVAILABLE" ? "AVAILABLE" : "UNINSTALLED";
 
+    const nextDue = new Date();
+    nextDue.setDate(nextDue.getDate() + (parsed.maintenanceCycle || 90));
+
     const holding = await prisma.$transaction(async (tx) => {
         const newHolding = await tx.holding.create({
             data: {
                 ...rest,
-                status: derivedStatus
+                status: derivedStatus,
+                nextMaintenanceDue: nextDue,
             },
         });
 

@@ -65,7 +65,21 @@ export const HoldingListColumns = [
     },
     {
         header: "Status",
-        cell: (row: any) => <StatusBadge status={row.status} />,
+        cell: (row: any) => {
+            const activeContract = row.ownershipContracts?.find((c: any) => c.status === "ACTIVE");
+            const isExpiring = activeContract && new Date(activeContract.endDate).getTime() < Date.now() + (30 * 24 * 60 * 60 * 1000);
+            
+            return (
+                <div className="flex flex-col gap-1">
+                    <StatusBadge status={row.status} />
+                    {isExpiring && (
+                        <Badge variant="destructive" className="text-[9px] py-0 h-4 animate-pulse">
+                            Contract Expiring
+                        </Badge>
+                    )}
+                </div>
+            );
+        },
     },
     {
         header: "Actions",

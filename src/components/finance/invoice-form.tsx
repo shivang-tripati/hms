@@ -3,10 +3,10 @@
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
     Form,
     FormControl,
@@ -239,7 +239,7 @@ export function InvoiceForm({ initialData, clients, bookings, existingInvoices, 
     const { isIntraState, isInterState } = useMemo(() => {
         const client = clients.find(c => c.id === watchedClientId);
         const clientState = client?.city?.state;
-        
+
         const inter = !!(companyState && clientState && companyState.trim().toLowerCase() !== clientState.trim().toLowerCase());
         const intra = !inter;
         return { isIntraState: intra, isInterState: inter };
@@ -688,7 +688,7 @@ export function InvoiceForm({ initialData, clients, bookings, existingInvoices, 
                                                 name={`items.${index}.quantity`}
                                                 render={({ field: f }) => (
                                                     <FormItem>
-                                                        <FormLabel className="text-xs">Qty</FormLabel>
+                                                        <FormLabel className="text-xs">Qty / Days</FormLabel>
                                                         <FormControl>
                                                             <Input
                                                                 type="number"
@@ -765,30 +765,11 @@ export function InvoiceForm({ initialData, clients, bookings, existingInvoices, 
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                     <FormLabel>Invoice Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    disabled={isLocked}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground",
-                                                    )}
-                                                >
-                                                    {field.value ? format(field.value, "PPP") : "Pick date"}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={isLocked ? undefined : field.onChange}
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                                    <DatePicker
+                                        value={field.value}
+                                        onChange={isLocked ? undefined : field.onChange}
+                                        disabled={isLocked}
+                                    />
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -799,30 +780,11 @@ export function InvoiceForm({ initialData, clients, bookings, existingInvoices, 
                             render={({ field }) => (
                                 <FormItem className="flex flex-col">
                                     <FormLabel>Due Date</FormLabel>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                                <Button
-                                                    variant="outline"
-                                                    disabled={isLocked}
-                                                    className={cn(
-                                                        "w-full pl-3 text-left font-normal",
-                                                        !field.value && "text-muted-foreground",
-                                                    )}
-                                                >
-                                                    {field.value ? format(field.value, "PPP") : "Pick date"}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={field.value}
-                                                onSelect={isLocked ? undefined : field.onChange}
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
+                                    <DatePicker
+                                        value={field.value}
+                                        onChange={isLocked ? undefined : field.onChange}
+                                        disabled={isLocked}
+                                    />
                                     <FormMessage />
                                 </FormItem>
                             )}
