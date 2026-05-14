@@ -101,60 +101,61 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </Alert>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                 {/* Physical Specifications */}
-                <Card className="md:col-span-2">
-                    <CardHeader>
-                        <CardTitle className="text-base font-semibold">Specifications</CardTitle>
+                <Card className="col-span-1 md:col-span-2 shadow-sm border-border/60">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <Ruler className="h-4 w-4 text-primary" /> Specifications
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-8 gap-x-6 text-sm">
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded-lg shrink-0">
-                                <Ruler className="h-4 w-4 text-primary" />
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6 text-sm">
+                        <div className="flex items-start gap-3.5">
+                            <div className="p-2.5 bg-primary/5 text-primary rounded-xl shrink-0 border border-primary/10">
+                                <Ruler className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Dimensions</p>
-                                <p className="font-bold text-base">{holding.width} x {holding.height} ft</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Total Area: {formatArea(holding.totalArea)}</p>
+                                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-1">Dimensions</p>
+                                <p className="font-bold text-base leading-tight">{holding.width} x {holding.height} ft</p>
+                                <p className="text-xs text-muted-foreground mt-1">Area: <span className="font-medium text-foreground">{formatArea(holding.totalArea)}</span></p>
                             </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded-lg shrink-0">
-                                <Lightbulb className="h-4 w-4 text-primary" />
+                        <div className="flex items-start gap-3.5">
+                            <div className="p-2.5 bg-primary/5 text-primary rounded-xl shrink-0 border border-primary/10">
+                                <Lightbulb className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Illumination</p>
-                                <p className="font-bold text-base">{formatEnum(holding.illumination)}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Facing: {holding.facing || "N/A"}</p>
+                                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-1">Illumination</p>
+                                <p className="font-bold text-base leading-tight">{formatEnum(holding.illumination)}</p>
+                                <p className="text-xs text-muted-foreground mt-1">Facing: <span className="font-medium text-foreground">{holding.facing || "N/A"}</span></p>
                             </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded-lg shrink-0">
-                                <MapPin className="h-4 w-4 text-primary" />
+                        <div className="flex items-start gap-3.5">
+                            <div className="p-2.5 bg-primary/5 text-primary rounded-xl shrink-0 border border-primary/10">
+                                <MapPin className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Location Details</p>
-                                <p className="font-bold">{holding.landmark || "No landmark"}</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">{holding.city.name}, {holding.city.state}</p>
+                                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-1">Location</p>
+                                <p className="font-bold leading-snug line-clamp-2">{holding.landmark || "No landmark"}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{holding.city.name}, {holding.city.state}</p>
                                 {holding.latitude && holding.longitude && (
-                                    <p className="text-xs text-muted-foreground mt-1 font-mono bg-muted/50 px-1.5 py-0.5 rounded w-fit">
+                                    <div className="mt-2 text-[10px] font-mono bg-muted/80 px-2 py-0.5 rounded border border-border/50 w-fit text-muted-foreground">
                                         {Number(holding.latitude).toFixed(5)}, {Number(holding.longitude).toFixed(5)}
-                                    </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 bg-muted rounded-lg shrink-0">
-                                <Clock className="h-4 w-4 text-primary" />
+                        <div className="flex items-start gap-3.5">
+                            <div className="p-2.5 bg-primary/5 text-primary rounded-xl shrink-0 border border-primary/10">
+                                <Clock className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Maintenance</p>
-                                <p className="font-bold">Every {holding.maintenanceCycle} days</p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Last Sync: {formatDate(holding.updatedAt)}</p>
+                                <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider mb-1">Maintenance</p>
+                                <p className="font-bold leading-tight">Every {holding.maintenanceCycle} days</p>
+                                <p className="text-xs text-muted-foreground mt-1">Last Sync: <span className="font-medium text-foreground">{formatDate(holding.updatedAt)}</span></p>
                             </div>
                         </div>
                     </CardContent>
@@ -162,10 +163,11 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
                 {/* Booking Status Card */}
                 {role === "ADMIN" && (
-                    <Card className="col-span-1">
-                        <CardHeader>
+                    <Card className="col-span-1 shadow-sm border-border/60">
+                        <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4" /> {Date.now() > new Date(holding?.bookings?.[0]?.endDate).getTime() ? "Past Booking" : "Current Booking"}
+                                <CalendarClock className="h-4 w-4 text-primary" /> 
+                                {holding?.bookings?.[0]?.endDate && Date.now() > new Date(holding.bookings[0].endDate).getTime() ? "Past Booking" : "Current Booking"}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -223,8 +225,8 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
 
 
                 {/* Images */}
-                <Card className="col-span-3">
-                    <CardHeader>
+                <Card className="col-span-1 md:col-span-3 shadow-sm border-border/60">
+                    <CardHeader className="pb-3">
                         <CardTitle className="text-base">Images</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -237,13 +239,13 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </Card>
 
                 {/* Inspection History */}
-                <div className="col-span-3">
+                <div className="col-span-1 md:col-span-3">
                     <InspectionHistory inspections={holding.inspections || []} />
                 </div>
 
                 {/* Contract History (Admin Only) */}
                 {role === "ADMIN" && (
-                    <div className="col-span-3">
+                    <div className="col-span-1 md:col-span-3">
                         <ContractHistory contracts={holding.ownershipContracts || []} />
                     </div>
                 )}
