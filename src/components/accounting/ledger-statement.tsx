@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ExportButton } from "@/components/shared/export-button";
+import { triggerPrint } from "@/lib/print-utils";
 
 interface Transaction {
     id: string;
@@ -204,8 +205,15 @@ export function LedgerStatement({ ledgerId }: { ledgerId: string }) {
     }, []);
 
     const handlePrint = () => {
-        // Triggering window.print() will automatically fire the matchMedia listener above
-        window.print();
+        if (data) {
+            triggerPrint({
+                type: "Ledger",
+                clientCode: data.ledger.code,
+                clientName: data.ledger.name,
+            });
+        } else {
+            window.print();
+        }
     };
 
     return (

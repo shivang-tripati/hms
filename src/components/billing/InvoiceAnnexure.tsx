@@ -9,6 +9,7 @@ import {
     type BookingAnnexure,
     type InvoiceAnnexureResponse,
 } from "@/lib/invoice-annexure";
+import { triggerPrint } from "@/lib/print-utils";
 
 interface InvoiceAnnexureProps {
     invoiceId: string;
@@ -41,7 +42,7 @@ export function InvoiceAnnexure({ invoiceId }: InvoiceAnnexureProps) {
     useEffect(() => {
         if (!loading && data && !hasTriggeredPrint) {
             const timer = window.setTimeout(() => {
-                window.print();
+                handlePrint();
                 setHasTriggeredPrint(true);
             }, 350);
             return () => window.clearTimeout(timer);
@@ -51,7 +52,16 @@ export function InvoiceAnnexure({ invoiceId }: InvoiceAnnexureProps) {
     const bookings = useMemo(() => data?.bookings ?? [], [data]);
 
     const handlePrint = () => {
-        window.print();
+        if (data && data.bookings.length > 0) {
+            const firstBooking = data.bookings[0];
+            triggerPrint({
+                type: "Annexure",
+                clientName: firstBooking.clientName,
+                hoardingCode: data.bookings.length === 1 ? firstBooking.holdingNo : undefined,
+            });
+        } else {
+            window.print();
+        }
     };
 
     if (loading) {

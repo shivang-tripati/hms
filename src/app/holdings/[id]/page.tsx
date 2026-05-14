@@ -88,7 +88,7 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </div>
             </div>
 
-            {isExpiringSoon && (
+            {role === "ADMIN" && isExpiringSoon && (
                 <Alert variant={isExpired ? "destructive" : "default"} className={isExpired ? "" : "border-amber-200 bg-amber-50 text-amber-900"}>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{isExpired ? "Contract Expired" : "Contract Expiring Soon"}</AlertTitle>
@@ -104,49 +104,57 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Physical Specifications */}
-                <Card className="col-span-2">
+                <Card className="md:col-span-2">
                     <CardHeader>
-                        <CardTitle className="text-base">Specifications</CardTitle>
+                        <CardTitle className="text-base font-semibold">Specifications</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-2 gap-6 text-sm">
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-8 gap-x-6 text-sm">
                         <div className="flex items-start gap-3">
-                            <Ruler className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div>
-                                <p className="text-muted-foreground mb-1">Dimensions</p>
-                                <p className="font-medium text-base">{holding.width} x {holding.height} ft</p>
-                                <p className="text-xs text-muted-foreground mt-1">Total Area: {formatArea(holding.totalArea)}</p>
+                            <div className="p-2 bg-muted rounded-lg shrink-0">
+                                <Ruler className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Dimensions</p>
+                                <p className="font-bold text-base">{holding.width} x {holding.height} ft</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Total Area: {formatArea(holding.totalArea)}</p>
                             </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                            <Lightbulb className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div>
-                                <p className="text-muted-foreground mb-1">Illumination</p>
-                                <p className="font-medium text-base">{formatEnum(holding.illumination)}</p>
-                                <p className="text-xs text-muted-foreground mt-1">Facing: {holding.facing || "N/A"}</p>
+                            <div className="p-2 bg-muted rounded-lg shrink-0">
+                                <Lightbulb className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Illumination</p>
+                                <p className="font-bold text-base">{formatEnum(holding.illumination)}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Facing: {holding.facing || "N/A"}</p>
                             </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div>
-                                <p className="text-muted-foreground mb-1">Location Details</p>
-                                <p className="font-medium">{holding.landmark || "No landmark"}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{holding.city.name}, {holding.city.state}</p>
+                            <div className="p-2 bg-muted rounded-lg shrink-0">
+                                <MapPin className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Location Details</p>
+                                <p className="font-bold">{holding.landmark || "No landmark"}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{holding.city.name}, {holding.city.state}</p>
                                 {holding.latitude && holding.longitude && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        📍 {Number(holding.latitude).toFixed(6)}, {Number(holding.longitude).toFixed(6)}
+                                    <p className="text-xs text-muted-foreground mt-1 font-mono bg-muted/50 px-1.5 py-0.5 rounded w-fit">
+                                        {Number(holding.latitude).toFixed(5)}, {Number(holding.longitude).toFixed(5)}
                                     </p>
                                 )}
                             </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                            <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div>
-                                <p className="text-muted-foreground mb-1">Maintenance</p>
-                                <p className="font-medium">Every {holding.maintenanceCycle} days</p>
-                                <p className="text-xs text-muted-foreground mt-1">Last Updated: {formatDate(holding.updatedAt)}</p>
+                            <div className="p-2 bg-muted rounded-lg shrink-0">
+                                <Clock className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider mb-1">Maintenance</p>
+                                <p className="font-bold">Every {holding.maintenanceCycle} days</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Last Sync: {formatDate(holding.updatedAt)}</p>
                             </div>
                         </div>
                     </CardContent>

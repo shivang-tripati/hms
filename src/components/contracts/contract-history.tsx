@@ -11,7 +11,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, ExternalLink } from "lucide-react";
+import { FileText, ExternalLink, FileDown, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -67,12 +67,32 @@ export function ContractHistory({ contracts, title = "Contract History" }: Contr
                                         <StatusBadge status={contract.status} />
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                            <Link href={`/ownership-contracts/${contract.id}`}>
-                                                <ExternalLink className="h-4 w-4" />
-                                                <span className="sr-only">View</span>
-                                            </Link>
-                                        </Button>
+                                        <div className="flex justify-end gap-1">
+                                            {contract.agreementUrl && (
+                                                <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Agreement">
+                                                    <a href={contract.agreementUrl} target="_blank" rel="noopener noreferrer">
+                                                        <FileDown className="h-4 w-4 text-blue-500" />
+                                                        <span className="sr-only">Document</span>
+                                                    </a>
+                                                </Button>
+                                            )}
+
+                                            {(contract.status === 'EXPIRED' || new Date(contract.endDate) < new Date()) && (
+                                                <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="Create New Contract (Renew)">
+                                                    <Link href={`/ownership-contracts/new?vendorId=${contract.vendorId}&holdingId=${contract.holdingId}`}>
+                                                        <RotateCcw className="h-4 w-4 text-amber-600" />
+                                                        <span className="sr-only">Renew</span>
+                                                    </Link>
+                                                </Button>
+                                            )}
+
+                                            <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details">
+                                                <Link href={`/ownership-contracts/${contract.id}`}>
+                                                    <ExternalLink className="h-4 w-4" />
+                                                    <span className="sr-only">View</span>
+                                                </Link>
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))}

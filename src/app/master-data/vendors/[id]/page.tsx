@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Building2, Phone, Mail, MapPin, Receipt, CalendarClock, Pencil, FileText, Download, Paperclip, IndianRupee } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, Receipt, CalendarClock, Pencil, FileText, Download, Paperclip, IndianRupee, FileDown, RotateCcw, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { VendorDeleteButton } from "@/components/accounting/vendor-delete-button";
@@ -211,7 +211,8 @@ export default async function VendorDetailsPage({ params }: VendorDetailsPagePro
                                             <th className="py-2 px-3">Start Date</th>
                                             <th className="py-2 px-3">End Date</th>
                                             <th className="py-2 px-3">Rent</th>
-                                            <th className="py-2 px-3 text-right">Status</th>
+                                            <th className="py-2 px-3">Status</th>
+                                            <th className="py-2 px-3 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y">
@@ -231,8 +232,31 @@ export default async function VendorDetailsPage({ params }: VendorDetailsPagePro
                                                 <td className="py-3 px-3">{formatDate(contract.startDate)}</td>
                                                 <td className="py-3 px-3">{formatDate(contract.endDate)}</td>
                                                 <td className="py-3 px-3 font-semibold">{formatCurrency(contract.rentAmount)}</td>
-                                                <td className="py-3 px-3 text-right">
+                                                <td className="py-3 px-3">
                                                     <StatusBadge status={contract.status} />
+                                                </td>
+                                                <td className="py-3 px-3 text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        {contract.agreementUrl && (
+                                                            <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Agreement">
+                                                                <a href={contract.agreementUrl} target="_blank" rel="noopener noreferrer">
+                                                                    <FileDown className="h-4 w-4 text-blue-500" />
+                                                                </a>
+                                                            </Button>
+                                                        )}
+                                                        {(contract.status === 'EXPIRED' || new Date(contract.endDate) < new Date()) && (
+                                                            <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="Renew Contract">
+                                                                <Link href={`/ownership-contracts/new?vendorId=${vendor.id}&holdingId=${contract.holdingId}`}>
+                                                                    <RotateCcw className="h-4 w-4 text-amber-600" />
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                        <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0" title="View Details">
+                                                            <Link href={`/ownership-contracts/${contract.id}`}>
+                                                                <ExternalLink className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

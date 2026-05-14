@@ -6,6 +6,8 @@ import { Printer, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { amountToWords } from "@/lib/number-to-words";
 
+import { triggerPrint } from "@/lib/print-utils";
+
 interface PrintInvoiceProps {
   invoiceId: string;
 }
@@ -111,7 +113,15 @@ export function PrintInvoice({ invoiceId }: PrintInvoiceProps) {
   }, [invoiceId]);
 
   const handlePrint = () => {
-    window.print();
+    if (invoice) {
+      triggerPrint({
+        type: "Invoice",
+        invoiceNo: invoice.invoiceNumber,
+        clientName: invoice.client.name,
+      });
+    } else {
+      window.print();
+    }
   };
 
   if (loading) {

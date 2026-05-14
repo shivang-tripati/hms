@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatCurrency, formatEnum } from "@/lib/utils";
-import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays, Paperclip, Download } from "lucide-react";
+import { FileText, Pencil, User, Building2, IndianRupee, CalendarDays, Paperclip, Download, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { ContractHistory } from "@/components/contracts/contract-history";
 
@@ -37,6 +37,13 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                 />
                 <div className="flex items-center gap-2">
                     <StatusBadge status={contract.status} />
+                    {(contract.status === 'EXPIRED' || new Date(contract.endDate) < new Date()) && (
+                        <Button asChild variant="outline" size="sm" className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800">
+                            <Link href={`/ownership-contracts/new?vendorId=${contract.vendorId}&holdingId=${contract.holdingId}`}>
+                                <RotateCcw className="mr-2 h-4 w-4" /> Renew
+                            </Link>
+                        </Button>
+                    )}
                     <Button asChild variant="outline" size="sm">
                         <Link href={`/ownership-contracts/${id}/edit`}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit

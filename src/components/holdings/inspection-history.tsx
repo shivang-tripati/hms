@@ -24,7 +24,7 @@ interface InspectionHistoryProps {
 }
 
 export function InspectionHistory({ inspections }: InspectionHistoryProps) {
-    const [showAll, setShowAll] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     if (!inspections || inspections.length === 0) {
         return (
@@ -41,7 +41,7 @@ export function InspectionHistory({ inspections }: InspectionHistoryProps) {
         );
     }
 
-    const displayedInspections = showAll ? inspections : inspections.slice(0, 1);
+    const currentInspection = inspections[currentIndex];
 
     return (
         <Card className="col-span-2">
@@ -50,71 +50,80 @@ export function InspectionHistory({ inspections }: InspectionHistoryProps) {
                     <ClipboardCheck className="h-4 w-4" /> Inspection History
                 </CardTitle>
                 {inspections.length > 1 && (
-                    <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setShowAll(!showAll)}
-                        className="text-xs h-8"
-                    >
-                        {showAll ? (
-                            <>Hide <ChevronUp className="ml-1 h-3 w-3" /></>
-                        ) : (
-                            <>Show More ({inspections.length - 1}) <ChevronDown className="ml-1 h-3 w-3" /></>
-                        )}
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground font-medium">
+                            {currentIndex + 1} of {inspections.length}
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                                disabled={currentIndex === 0}
+                                className="h-7 w-7 p-0"
+                            >
+                                <ChevronDown className="h-4 w-4 rotate-90" />
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setCurrentIndex(prev => Math.min(inspections.length - 1, prev + 1))}
+                                disabled={currentIndex === inspections.length - 1}
+                                className="h-7 w-7 p-0"
+                            >
+                                <ChevronDown className="h-4 w-4 -rotate-90" />
+                            </Button>
+                        </div>
+                    </div>
                 )}
             </CardHeader>
             <CardContent className="space-y-6 pt-4">
-                {displayedInspections.map((inspection, index) => (
-                    <div key={inspection.id} className="space-y-6">
-                        {index > 0 && <div className="border-t pt-6" />}
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Date</p>
-                                <div className="flex items-center gap-2 font-medium">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                    {formatDate(inspection.inspectionDate)}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Inspector</p>
-                                <div className="flex items-center gap-2 font-medium">
-                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                    {inspection.inspectorName || "N/A"}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condition</p>
-                                <StatusBadge status={inspection.condition} />
-                            </div>
-                            <div className="space-y-1 sm:col-span-2 lg:col-span-4">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Detailed Status</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <StatusBox active={inspection.illuminationOk} icon={Zap} label="Illumination" />
-                                    <StatusBox active={inspection.structureOk} icon={ShieldCheck} label="Structure" />
-                                    <StatusBox active={inspection.visibilityOk} icon={Eye} label="Visibility" />
-                                </div>
+                <div key={currentInspection.id} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Date</p>
+                            <div className="flex items-center gap-2 font-medium">
+                                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                {formatDate(currentInspection.inspectionDate)}
                             </div>
                         </div>
-
-                        {inspection.remarks && (
-                            <div className="space-y-1.5">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Remarks</p>
-                                <p className="text-sm bg-slate-50 p-3 rounded-md border border-slate-100 italic dark:bg-slate-700 dark:border-slate-700 dark:text-slate-300">
-                                    &quot;{inspection.remarks}&quot;
-                                </p>
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Inspector</p>
+                            <div className="flex items-center gap-2 font-medium">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                {currentInspection.inspectorName || "N/A"}
                             </div>
-                        )}
-
-                        {inspection.photos && inspection.photos.length > 0 && (
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Photos</p>
-                                <PhotoGallery photos={inspection.photos} />
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condition</p>
+                            <StatusBadge status={currentInspection.condition} />
+                        </div>
+                        <div className="space-y-1 sm:col-span-2 lg:col-span-4">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Detailed Status</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <StatusBox active={currentInspection.illuminationOk} icon={Zap} label="Illumination" />
+                                <StatusBox active={currentInspection.structureOk} icon={ShieldCheck} label="Structure" />
+                                <StatusBox active={currentInspection.visibilityOk} icon={Eye} label="Visibility" />
                             </div>
-                        )}
+                        </div>
                     </div>
-                ))}
+
+                    {currentInspection.remarks && (
+                        <div className="space-y-1.5">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Remarks</p>
+                            <p className="text-sm bg-slate-50 p-3 rounded-md border border-slate-100 italic dark:bg-slate-700 dark:border-slate-700 dark:text-slate-300">
+                                &quot;{currentInspection.remarks}&quot;
+                            </p>
+                        </div>
+                    )}
+
+                    {currentInspection.photos && currentInspection.photos.length > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Photos</p>
+                            <PhotoGallery photos={currentInspection.photos} />
+                        </div>
+                    )}
+                </div>
             </CardContent>
         </Card>
     );

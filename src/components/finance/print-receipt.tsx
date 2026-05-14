@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Printer, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { amountToWords } from "@/lib/number-to-words";
+import { triggerPrint } from "@/lib/print-utils";
 
 interface PrintReceiptProps {
   receiptId: string;
@@ -90,7 +91,15 @@ export function PrintReceipt({ receiptId }: PrintReceiptProps) {
   }, [receiptId]);
 
   const handlePrint = () => {
-    window.print();
+    if (receipt) {
+      triggerPrint({
+        type: "Receipt",
+        receiptNo: receipt.receiptNumber,
+        clientName: receipt.client.name,
+      });
+    } else {
+      window.print();
+    }
   };
 
   if (loading) {
