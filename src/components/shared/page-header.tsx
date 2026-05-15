@@ -28,7 +28,7 @@ export function PageHeader({
                     </div>
                 )}
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+                    <h1 className="text-2xl font-bold tracking-tight break-words break-all whitespace-normal  w-full">{title}</h1>
                     <div className="text-sm text-muted-foreground">{description}</div>
                 </div>
             </div>

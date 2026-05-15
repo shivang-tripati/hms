@@ -39,7 +39,7 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                     <StatusBadge status={contract.status} />
                     {(contract.status === 'EXPIRED' || new Date(contract.endDate) < new Date()) && (
                         <Button asChild variant="outline" size="sm" className="border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800">
-                            <Link href={`/ownership-contracts/new?vendorId=${contract.vendorId}&holdingId=${contract.holdingId}`}>
+                            <Link href={`/ownership-contracts/new?vendorId=${contract.vendorId}&holdingId=${contract.holdingId}&contractType=${contract.contractType}&rentAmount=${contract.rentAmount}&rentCycle=${contract.rentCycle}${contract.securityDeposit ? `&securityDeposit=${contract.securityDeposit}` : ""}`}>
                                 <RotateCcw className="mr-2 h-4 w-4" /> Renew
                             </Link>
                         </Button>
@@ -54,20 +54,54 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Vendor Details */}
-                <Card className="md:col-span-2">
+                <Card className="col-span-1 md:col-span-2">
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2">
                             <User className="h-4 w-4" /> Vendor Details
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-2 gap-6 text-sm">
-                        <div>
-                            <p className="text-muted-foreground mb-1">Vendor Name</p>
-                            <p className="font-medium text-base">{contract.vendor?.name || "N/A"}</p>
+                    <CardContent className="grid gap-6 text-sm">
+                        <div className="space-y-4 sm:grid sm:grid-cols-2">
+                            <div>
+                                <p className="text-muted-foreground mb-1">Vendor Name</p>
+                                <p className="font-medium text-base">{contract.vendor?.name || "N/A"}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground mb-1">Contact</p>
+                                <p className="font-medium">{contract.vendor?.phone || "N/A"}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-muted-foreground mb-1">Contact</p>
-                            <p className="font-medium">{contract.vendor?.phone || "N/A"}</p>
+                        <div className="grid sm:grid-cols-2 gap-6 pt-4 border-t border-border">
+                            <div>
+                                <p className="text-muted-foreground mb-1">Vendor Agreement</p>
+                                {contract.vendor?.agreementDocumentUrl ? (
+                                    <a 
+                                        href={contract.vendor.agreementDocumentUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="flex items-center gap-2 text-primary hover:underline font-medium"
+                                    >
+                                        <Paperclip className="h-4 w-4" /> View Document
+                                    </a>
+                                ) : (
+                                    <p className="text-muted-foreground italic">No document</p>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground mb-1">Vendor KYC</p>
+                                {contract.vendor?.kycDocumentUrl ? (
+                                    <a 
+                                        href={contract.vendor.kycDocumentUrl} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="flex items-center gap-2 text-primary hover:underline font-medium"
+                                    >
+                                        <Paperclip className="h-4 w-4" /> View Document
+                                    </a>
+                                ) : (
+                                    <p className="text-muted-foreground italic">No document</p>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -160,46 +194,71 @@ export default async function ContractDetailsPage({ params }: ContractDetailsPag
                 )}
 
                 {/* Documents */}
-                {(contract.agreementUrl || contract.vendor?.kycDocumentUrl) && (
-                    <Card className="col-span-full">
-                        <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <Paperclip className="h-4 w-4" /> Documents
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-wrap gap-4">
-                            {contract.agreementUrl && (
-                                <a
-                                    href={contract.agreementUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
-                                >
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    Agreement Document
-                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
-                                </a>
-                            )}
-                            {contract.vendor?.kycDocumentUrl && (
-                                <a
-                                    href={contract.vendor.kycDocumentUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
-                                >
-                                    <FileText className="h-4 w-4 text-primary" />
-                                    Vendor KYC Document
-                                    <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
-                                </a>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+                <Card className="col-span-full">
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Paperclip className="h-4 w-4" /> Documents
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-wrap gap-4">
+                        {contract.agreementUrl ? (
+                            <a
+                                href={contract.agreementUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                            >
+                                <FileText className="h-4 w-4 text-primary" />
+                                Contract Agreement
+                                <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                            </a>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border bg-muted/10 text-muted-foreground text-sm">
+                                <FileText className="h-4 w-4 opacity-50" />
+                                No Contract Agreement
+                            </div>
+                        )}
+                        {contract.vendor?.agreementDocumentUrl ? (
+                            <a
+                                href={contract.vendor.agreementDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                            >
+                                <FileText className="h-4 w-4 text-primary" />
+                                Vendor Agreement
+                                <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                            </a>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border bg-muted/10 text-muted-foreground text-sm">
+                                <FileText className="h-4 w-4 opacity-50" />
+                                No Vendor Agreement
+                            </div>
+                        )}
+                        {contract.vendor?.kycDocumentUrl ? (
+                            <a
+                                href={contract.vendor.kycDocumentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted transition-colors text-sm font-medium"
+                            >
+                                <FileText className="h-4 w-4 text-primary" />
+                                Vendor KYC Document
+                                <Download className="h-3.5 w-3.5 text-muted-foreground ml-1" />
+                            </a>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-border bg-muted/10 text-muted-foreground text-sm">
+                                <FileText className="h-4 w-4 opacity-50" />
+                                No Vendor KYC
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Contract History */}
                 <div className="col-span-full">
-                    <ContractHistory 
-                        contracts={contract.holding?.ownershipContracts || []} 
+                    <ContractHistory
+                        contracts={contract.holding?.ownershipContracts || []}
                         title="Hoarding Contract History"
                     />
                 </div>

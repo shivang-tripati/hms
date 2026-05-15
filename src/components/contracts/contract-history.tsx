@@ -56,6 +56,7 @@ export function ContractHistory({ contracts, title = "Contract History" }: Contr
                         </TableHeader>
                         <TableBody>
                             {contracts.map((contract) => (
+                                console.log(contract),
                                 <TableRow key={contract.id}>
                                     <TableCell className="font-medium">{contract.contractNumber}</TableCell>
                                     <TableCell>{contract.vendor?.name || "N/A"}</TableCell>

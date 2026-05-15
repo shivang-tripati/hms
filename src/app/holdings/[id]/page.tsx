@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatArea, formatDate, formatEnum } from "@/lib/utils";
-import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation, ClipboardCheck, User } from "lucide-react";
+import { MapPin, Ruler, Lightbulb, Clock, Pencil, CalendarClock, Navigation, ClipboardCheck, User, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { auth } from "@/auth";
@@ -46,9 +46,9 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
     // Create a shadow copy to avoid mutating the original if needed, but here we just re-map
     const viewHolding = { ...holding, bookings: displayBookings };
 
-    const activeContract = holding.ownershipContracts?.find((c: any) => c.status === "ACTIVE");
-    const isExpiringSoon = activeContract && new Date(activeContract.endDate).getTime() < Date.now() + (30 * 24 * 60 * 60 * 1000);
-    const isExpired = activeContract && new Date(activeContract.endDate).getTime() < Date.now();
+    const latestContract = holding.ownershipContracts?.[0];
+    const isExpiringSoon = latestContract?.status === "ACTIVE" && new Date(latestContract.endDate).getTime() < Date.now() + (30 * 24 * 60 * 60 * 1000);
+    const isExpired = latestContract?.status === "EXPIRED" || (latestContract?.status === "ACTIVE" && new Date(latestContract.endDate).getTime() < Date.now());
 
     return (
         <div className="space-y-6 px-1 sm:px-0">
@@ -96,14 +96,14 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                 </div>
             </div>
 
-            {role === "ADMIN" && isExpiringSoon && (
+            {role === "ADMIN" && (isExpiringSoon || isExpired) && (
                 <Alert variant={isExpired ? "destructive" : "default"} className={isExpired ? "" : "border-amber-200 bg-amber-50 text-amber-900"}>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>{isExpired ? "Contract Expired" : "Contract Expiring Soon"}</AlertTitle>
                     <AlertDescription>
                         {isExpired
-                            ? `The ownership contract for this hoarding expired on ${formatDate(activeContract.endDate)}.`
-                            : `The ownership contract for this hoarding will expire on ${formatDate(activeContract.endDate)}. Please initiate renewal.`
+                            ? `The ownership contract for this hoarding expired on ${formatDate(latestContract.endDate)}.`
+                            : `The ownership contract for this hoarding will expire on ${formatDate(latestContract.endDate)}. Please initiate renewal.`
                         }
                     </AlertDescription>
                 </Alert>
@@ -283,9 +283,17 @@ export default async function HoldingDetailsPage({ params }: HoldingDetailsPageP
                                     <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider font-bold">
                                         Primary Contractor
                                     </p>
-                                    <p className="font-bold text-xl text-primary truncate overflow-hidden text-ellipsis">
+                                    <p className="font-bold text-xl text-primary break-words break-all whitespace-normal flex items-center gap-2">
                                         {holding.vendor.name}
+                                        <Button asChild variant="ghost" size="sm" className="h-6 w-6 p-0" title="View Details">
+                                            <Link href={`/master-data/vendors/${holding.vendor.id}`}>
+                                                <ExternalLink className="h-4 w-4" />
+                                                <span className="sr-only">View</span>
+                                            </Link>
+                                        </Button>
                                     </p>
+
+
                                     <div className="mt-1.5">
                                         <StatusBadge status={holding.vendor.isActive ? "ACTIVE" : "INACTIVE"} />
                                     </div>

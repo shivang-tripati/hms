@@ -19,7 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                         }
                     } 
                 },
-                vendor: { select: { id: true, name: true, phone: true, kycDocumentUrl: true } },
+                vendor: { select: { id: true, name: true, phone: true, kycDocumentUrl: true, agreementDocumentUrl: true } },
             },
         });
         if (!contract) return NextResponse.json({ error: "Not found" }, { status: 404 });

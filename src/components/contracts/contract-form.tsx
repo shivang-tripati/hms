@@ -26,7 +26,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ownershipContractSchema, type OwnershipContractFormData } from "@/lib/validations";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import logger from "@/lib/logger";
@@ -149,6 +149,15 @@ function PdfUploadField({ label, value, onChange, hint }: PdfUploadFieldProps) {
 
 export function ContractForm({ initialData, holdings, vendors }: ContractFormProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    // Query parameters for pre-filling (Renewal)
+    const vendorIdParam = searchParams.get("vendorId");
+    const holdingIdParam = searchParams.get("holdingId");
+    const contractTypeParam = searchParams.get("contractType");
+    const rentAmountParam = searchParams.get("rentAmount");
+    const rentCycleParam = searchParams.get("rentCycle");
+    const securityDepositParam = searchParams.get("securityDeposit");
 
     const defaultValues: Partial<OwnershipContractFormData> = initialData
         ? {
@@ -167,14 +176,15 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
         }
         : {
             contractNumber: "",
-            vendorId: "",
-            contractType: "ASSET_RENTING",
-            rentAmount: 0,
-            rentCycle: "MONTHLY",
+            vendorId: vendorIdParam || "",
+            contractType: (contractTypeParam as any) || "ASSET_RENTING",
+            rentAmount: rentAmountParam ? Number(rentAmountParam) : 0,
+            rentCycle: (rentCycleParam as any) || "MONTHLY",
             startDate: new Date(),
             endDate: undefined,
+            securityDeposit: securityDepositParam ? Number(securityDepositParam) : undefined,
             status: "ACTIVE",
-            holdingId: "",
+            holdingId: holdingIdParam || "",
         };
 
     const form = useForm<OwnershipContractFormData>({
@@ -187,6 +197,9 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
 
     // Filter Vendors based on Contract Type
     const filteredVendors = vendors.filter((vendor: Vendor) => {
+        // Always include the pre-filled or initial vendor to avoid empty selection on load
+        if (vendor.id === vendorIdParam || (initialData && vendor.id === initialData.vendorId)) return true;
+
         if (watchedContractType === "ASSET_RENTING") {
             return vendor.vendorType === "AGENCY";
         }
@@ -198,6 +211,9 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
 
     // Filter Holdings based on Contract Type and Vendor
     const filteredHoldings = holdings.filter((holding: any) => {
+        // Always include the pre-filled or initial holding
+        if (holding.id === holdingIdParam || (initialData && holding.id === initialData.holdingId)) return true;
+
         // 1. Check for active contracts (using correct relation name)
         const hasActiveContract = holding.ownershipContracts?.some((contract: OwnershipContract) => {
             // Skip current contract when editing
@@ -216,7 +232,7 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
                 // Actually, the check at line 209 already handles 'no active contract'.
                 // So if we are here, we know there's no active contract.
                 // We should allow it if vendor matches OR if it's currently unassigned (or we're reassigning).
-                return true; 
+                return true;
 
             case "SPACE_RENTING":
                 // Only show owned assets
@@ -228,10 +244,21 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
     });
 
     // Reset fields when contract type changes
+    const isFirstRender = useRef(true);
+    const prevContractType = useRef(watchedContractType);
     useEffect(() => {
-        if (!initialData) {
-            form.setValue("vendorId", "");
-            form.setValue("holdingId", "");
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            prevContractType.current = watchedContractType;
+            return;
+        }
+
+        if (watchedContractType !== prevContractType.current) {
+            if (!initialData) {
+                form.setValue("vendorId", "");
+                form.setValue("holdingId", "");
+            }
+            prevContractType.current = watchedContractType;
         }
     }, [watchedContractType, form, initialData]);
 
@@ -348,7 +375,7 @@ export function ContractForm({ initialData, holdings, vendors }: ContractFormPro
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Holding</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                         <SelectTrigger className="max-w-full">
                                             <SelectValue placeholder="Select holding" />

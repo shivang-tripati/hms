@@ -15,7 +15,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 vendor: {
                     include: { city: true },
                 },
-                ownershipContracts: { orderBy: { startDate: "desc" } },
+                ownershipContracts: {
+                    orderBy: { startDate: "desc" },
+                    include: {
+                        vendor: {
+                            select: { id: true, name: true }
+                        }
+                    },
+                },
                 bookings: {
                     include: {
                         client: true,
